@@ -338,7 +338,7 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
         actions: const [
-          _ShellTopBadge(label: 'V4.4'),
+          _ShellTopBadge(label: 'V4.3'),
           SizedBox(width: GameSpacing.sm),
         ],
       ),
@@ -499,7 +499,7 @@ class _DrawerHeader extends StatelessWidget {
                     const Text('Game Life', style: GameTextStyles.title),
                     const SizedBox(height: 3),
                     Text(
-                      'Edição Capítulos V4.4',
+                      'Edição Campanha V4.3',
                       style: GameTextStyles.caption.copyWith(color: GameColors.textSecondary),
                     ),
                   ],
@@ -622,7 +622,7 @@ class _DrawerFooter extends StatelessWidget {
           SizedBox(width: GameSpacing.xs),
           Expanded(
             child: Text(
-              'Release Premium V4.4 • local-first',
+              'Release Premium V4.3 • local-first',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GameTextStyles.caption,

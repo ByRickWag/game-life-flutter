@@ -10,7 +10,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const String _databaseName = 'game_life_release_v1.db';
-  static const int _databaseVersion = 16;
+  static const int _databaseVersion = 15;
 
   Database? _database;
 

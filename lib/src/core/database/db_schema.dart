@@ -234,7 +234,6 @@ class DbSchema {
     await _upgradeToV13(db);
     await _upgradeToV14(db);
     await _upgradeToV15(db);
-    await _upgradeToV16(db);
   }
 
   static Future<void> upgrade(Database db, int oldVersion, int newVersion) async {
@@ -325,9 +324,6 @@ class DbSchema {
 
     if (oldVersion < 15) {
       await _upgradeToV15(db);
-    }
-    if (oldVersion < 16) {
-      await _upgradeToV16(db);
     }
   }
 
@@ -455,11 +451,6 @@ class DbSchema {
         description TEXT,
         lore TEXT,
         target_date TEXT,
-        start_date TEXT,
-        end_date TEXT,
-        primary_area_id TEXT,
-        secondary_area_ids TEXT,
-        chapter_kind TEXT NOT NULL DEFAULT 'chapter',
         sort_order INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'active',
         progress REAL NOT NULL DEFAULT 0,
@@ -1004,46 +995,6 @@ class DbSchema {
     """, [now, now]);
   }
 
-
-
-
-  static Future<void> _upgradeToV16(Database db) async {
-    await _addColumnIfMissing(
-      db: db,
-      tableName: 'campaign_milestones',
-      columnName: 'start_date',
-      sql: 'ALTER TABLE campaign_milestones ADD COLUMN start_date TEXT;',
-    );
-    await _addColumnIfMissing(
-      db: db,
-      tableName: 'campaign_milestones',
-      columnName: 'end_date',
-      sql: 'ALTER TABLE campaign_milestones ADD COLUMN end_date TEXT;',
-    );
-    await _addColumnIfMissing(
-      db: db,
-      tableName: 'campaign_milestones',
-      columnName: 'primary_area_id',
-      sql: 'ALTER TABLE campaign_milestones ADD COLUMN primary_area_id TEXT;',
-    );
-    await _addColumnIfMissing(
-      db: db,
-      tableName: 'campaign_milestones',
-      columnName: 'secondary_area_ids',
-      sql: 'ALTER TABLE campaign_milestones ADD COLUMN secondary_area_ids TEXT;',
-    );
-    await _addColumnIfMissing(
-      db: db,
-      tableName: 'campaign_milestones',
-      columnName: 'chapter_kind',
-      sql: "ALTER TABLE campaign_milestones ADD COLUMN chapter_kind TEXT NOT NULL DEFAULT 'chapter';",
-    );
-
-    await db.execute("""
-      CREATE INDEX IF NOT EXISTS idx_campaign_chapters_area
-      ON campaign_milestones(campaign_id, primary_area_id, start_date, end_date);
-    """);
-  }
 
   static Future<void> _seedProjectDefaults(Database db) async {
     final now = DateTime.now().toIso8601String();

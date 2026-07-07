@@ -398,7 +398,7 @@ class SystemRepository {
     buffer.writeln('CAMPANHA');
     buffer.writeln('- ${readString(campaign, 'title', fallback: 'Sem campanha ativa')}');
     buffer.writeln('- Progresso médio: ${readInt(campaignProgress, 'progress_percent')}%');
-    buffer.writeln('- Capítulos concluídos: ${readInt(campaignProgress, 'completed_milestones')}/${readInt(campaignProgress, 'total_milestones')}');
+    buffer.writeln('- Marcos concluídos: ${readInt(campaignProgress, 'completed_milestones')}/${readInt(campaignProgress, 'total_milestones')}');
     buffer.writeln('');
     buffer.writeln('HERÓI');
     buffer.writeln('- Nome: ${readString(hero, 'name', fallback: 'Herói')}');

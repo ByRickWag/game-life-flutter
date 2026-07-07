@@ -121,7 +121,7 @@ class _VersionCard extends StatelessWidget {
             spacing: GameSpacing.xs,
             runSpacing: GameSpacing.xs,
             children: [
-              GameChip(label: '4.4.0', icon: Icons.new_releases_rounded, color: GameColors.primary, selected: true),
+              GameChip(label: '4.3.0', icon: Icons.new_releases_rounded, color: GameColors.primary, selected: true),
               GameChip(label: 'Premium UI', icon: Icons.auto_awesome_rounded, color: GameColors.reward, selected: true),
               GameChip(label: 'Local-first', icon: Icons.storage_rounded, color: GameColors.info, selected: true),
               GameChip(label: 'Offline', icon: Icons.cloud_off_rounded, color: GameColors.success, selected: true),
