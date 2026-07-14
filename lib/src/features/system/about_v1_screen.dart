@@ -12,9 +12,9 @@ class AboutV1Screen extends StatelessWidget {
     final content = SafeArea(
       child: SingleChildScrollView(
         padding: GameSpacing.screen,
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: const [
+          children: [
             GameHighlightCard(
               accentColor: GameColors.primary,
               child: Column(
@@ -25,7 +25,7 @@ class AboutV1Screen extends StatelessWidget {
                   Text('Game Life', style: GameTextStyles.title),
                   SizedBox(height: GameSpacing.xs),
                   Text(
-                    'Release Premium local-first para iniciar a campanha Transformação 20–25 com mais clareza, ritmo e presença visual.',
+                    'Release Premium local-first para iniciar a campanha Transformação 20–25 com capítulos mais claros, áreas inteligentes e evolução visível.',
                     style: GameTextStyles.body,
                   ),
                 ],
@@ -39,10 +39,10 @@ class AboutV1Screen extends StatelessWidget {
               icon: Icons.verified_rounded,
               color: GameColors.success,
               items: [
-                'Missões, hábitos, saúde, objetivos, sessões, projetos, cofre, loja, XP, coins, atributos e histórico continuam locais.',
+                'Missões, hábitos, saúde, objetivos, sessões, projetos, cofre, loja, XP, coins, atributos, áreas e histórico continuam locais.',
                 'O app funciona sem login, sem Firebase e sem sincronização em nuvem.',
                 'Os dados ficam salvos no aparelho usando SQLite local.',
-                'Onboarding, campanha, dificuldade, hábitos, saúde, cofre e loja já formam a base de uso diário.',
+                'Onboarding, campanha, dificuldade, hábitos, saúde, cofre, loja e capítulos formam a base de uso diário.',
               ],
             ),
             SizedBox(height: GameSpacing.md),
@@ -53,9 +53,8 @@ class AboutV1Screen extends StatelessWidget {
               items: [
                 'Dashboard com resumo da jornada e visual premium.',
                 'Jornada com missões, hábitos, saúde, objetivos e campanha.',
-                'Foco com registro de sessões, recentes e resumo.',
-                'Projetos com ativos, tarefas e concluídos.',
-                'Evolução com herói, atributos, conquistas e relatório.',
+                'Campanha com leitura narrativa por capítulos e sinais reais.',
+                'Evolução com herói, atributos, áreas, conquistas e relatório.',
                 'Finanças com Cofre do Reino e Loja V1.',
               ],
             ),
@@ -67,7 +66,7 @@ class AboutV1Screen extends StatelessWidget {
               items: [
                 'Pixel art completa e personagem animado.',
                 'Login, Firebase, sincronização em nuvem ou backend.',
-                'Calendário completo, loja avançada, pixel art e sistemas online.',
+                'Calendário completo, loja avançada e sistemas online.',
                 'Inventário cosmético complexo, bosses ou sistemas narrativos pesados.',
               ],
             ),
@@ -79,8 +78,8 @@ class AboutV1Screen extends StatelessWidget {
               items: [
                 'Use o app diariamente para registrar esforço real, água e limites alimentares.',
                 'Acompanhe missões, objetivos, sessões e projetos pelo Dashboard.',
+                'Use a campanha para enxergar o capítulo atual da sua jornada.',
                 'Ajuste dificuldade, presets e balanceamento em Configurações quando necessário.',
-                'Gere relatórios técnicos para revisar progresso e dados locais.',
               ],
             ),
             SizedBox(height: GameSpacing.lg),
@@ -90,7 +89,6 @@ class AboutV1Screen extends StatelessWidget {
     );
 
     if (embedded) return content;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Sobre')),
       body: content,
@@ -121,8 +119,8 @@ class _VersionCard extends StatelessWidget {
             spacing: GameSpacing.xs,
             runSpacing: GameSpacing.xs,
             children: [
-              GameChip(label: '4.3.0', icon: Icons.new_releases_rounded, color: GameColors.primary, selected: true),
-              GameChip(label: 'Premium UI', icon: Icons.auto_awesome_rounded, color: GameColors.reward, selected: true),
+              GameChip(label: '4.5.0', icon: Icons.new_releases_rounded, color: GameColors.primary, selected: true),
+              GameChip(label: 'Capítulos V1', icon: Icons.auto_stories_rounded, color: GameColors.faith, selected: true),
               GameChip(label: 'Local-first', icon: Icons.storage_rounded, color: GameColors.info, selected: true),
               GameChip(label: 'Offline', icon: Icons.cloud_off_rounded, color: GameColors.success, selected: true),
               GameChip(label: 'Android', icon: Icons.android_rounded, color: GameColors.reward, selected: true),
@@ -178,10 +176,7 @@ class _AboutSection extends StatelessWidget {
                   child: Container(
                     width: 5,
                     height: 5,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
                   ),
                 ),
                 const SizedBox(width: GameSpacing.sm),
