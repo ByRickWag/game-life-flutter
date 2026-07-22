@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../core/repositories/onboarding_repository.dart';
+import '../../core/services/difficulty_service.dart';
 import '../../design_system/game_design_system.dart';
 
 const int _totalPages = 8;
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key, required this.onCompleted, this.embeddedReset = false});
+  const OnboardingScreen({
+    super.key,
+    required this.onCompleted,
+    this.embeddedReset = false,
+  });
 
   final VoidCallback onCompleted;
   final bool embeddedReset;
@@ -20,11 +25,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _campaignTitleController = TextEditingController();
-  final TextEditingController _campaignDescriptionController = TextEditingController();
-  final TextEditingController _campaignMainGoalController = TextEditingController();
+  final TextEditingController _campaignTitleController =
+      TextEditingController();
+  final TextEditingController _campaignDescriptionController =
+      TextEditingController();
+  final TextEditingController _campaignMainGoalController =
+      TextEditingController();
   final TextEditingController _campaignLoreController = TextEditingController();
-  final TextEditingController _campaignStartController = TextEditingController();
+  final TextEditingController _campaignStartController =
+      TextEditingController();
   final TextEditingController _campaignEndController = TextEditingController();
 
   int _pageIndex = 0;
@@ -38,8 +47,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _victoryExcellentPercent = 90;
   bool _useStarterPresets = true;
   bool _useRecommendedSetup = true;
-  int _currentCheckInStreak = 0;
-  bool _hardcoreUnlocked = false;
+  HardcoreEligibility _hardcoreEligibility = const HardcoreEligibility(
+    validCheckIns: 0,
+    requiredCheckIns: DifficultyService.hardcoreRequiredCheckIns,
+  );
+  bool _canSelectHardcore = false;
   final Set<String> _selectedAreaIds = {
     'body_health',
     'mind_knowledge',
@@ -75,7 +87,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _AreaOption(
       id: 'projects_career',
       title: 'Carreira e Projetos',
-      description: 'Trabalho, programação, portfólio e construção profissional.',
+      description:
+          'Trabalho, programação, portfólio e construção profissional.',
       icon: Icons.work_rounded,
       color: GameColors.primary,
     ),
@@ -103,14 +116,54 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   static const List<_AttributeOption> _attributeOptions = [
-    _AttributeOption(id: 'strength', title: 'Força', icon: Icons.sports_martial_arts_rounded, color: GameColors.strength),
-    _AttributeOption(id: 'vigor', title: 'Vigor', icon: Icons.bolt_rounded, color: GameColors.vigor),
-    _AttributeOption(id: 'clarity', title: 'Clareza', icon: Icons.psychology_rounded, color: GameColors.clarity),
-    _AttributeOption(id: 'focus', title: 'Foco', icon: Icons.center_focus_strong_rounded, color: GameColors.focus),
-    _AttributeOption(id: 'creativity', title: 'Criatividade', icon: Icons.palette_rounded, color: GameColors.creativity),
-    _AttributeOption(id: 'responsibility', title: 'Responsabilidade', icon: Icons.account_balance_wallet_rounded, color: GameColors.responsibility),
-    _AttributeOption(id: 'discipline', title: 'Disciplina', icon: Icons.verified_rounded, color: GameColors.discipline),
-    _AttributeOption(id: 'faith', title: 'Fé', icon: Icons.church_rounded, color: GameColors.faith),
+    _AttributeOption(
+      id: 'strength',
+      title: 'Força',
+      icon: Icons.sports_martial_arts_rounded,
+      color: GameColors.strength,
+    ),
+    _AttributeOption(
+      id: 'vigor',
+      title: 'Vigor',
+      icon: Icons.bolt_rounded,
+      color: GameColors.vigor,
+    ),
+    _AttributeOption(
+      id: 'clarity',
+      title: 'Clareza',
+      icon: Icons.psychology_rounded,
+      color: GameColors.clarity,
+    ),
+    _AttributeOption(
+      id: 'focus',
+      title: 'Foco',
+      icon: Icons.center_focus_strong_rounded,
+      color: GameColors.focus,
+    ),
+    _AttributeOption(
+      id: 'creativity',
+      title: 'Criatividade',
+      icon: Icons.palette_rounded,
+      color: GameColors.creativity,
+    ),
+    _AttributeOption(
+      id: 'responsibility',
+      title: 'Responsabilidade',
+      icon: Icons.account_balance_wallet_rounded,
+      color: GameColors.responsibility,
+    ),
+    _AttributeOption(
+      id: 'discipline',
+      title: 'Disciplina',
+      icon: Icons.verified_rounded,
+      color: GameColors.discipline,
+    ),
+    _AttributeOption(
+      id: 'faith',
+      title: 'Fé',
+      icon: Icons.church_rounded,
+      color: GameColors.faith,
+    ),
   ];
 
   @override
@@ -151,23 +204,35 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _campaignLoreController.text = status.campaignLore;
         _campaignStartController.text = status.campaignStartDate;
         _campaignEndController.text = status.campaignEndDate;
-        _difficultyMode = status.difficultyMode == 'hardcore' && !status.hardcoreUnlocked ? 'normal' : status.difficultyMode;
+        _difficultyMode = status.difficultyMode;
         _waterTargetMl = status.waterTargetMl.clamp(500, 4000).toInt();
-        _victoryMinimumPercent = status.victoryMinimumPercent.clamp(1, 100).toInt();
-        _victoryGoodPercent = status.victoryGoodPercent.clamp(_victoryMinimumPercent, 100).toInt();
-        _victoryExcellentPercent = status.victoryExcellentPercent.clamp(_victoryGoodPercent, 100).toInt();
+        _victoryMinimumPercent = status.victoryMinimumPercent
+            .clamp(1, 100)
+            .toInt();
+        _victoryGoodPercent = status.victoryGoodPercent
+            .clamp(_victoryMinimumPercent, 100)
+            .toInt();
+        _victoryExcellentPercent = status.victoryExcellentPercent
+            .clamp(_victoryGoodPercent, 100)
+            .toInt();
         _useStarterPresets = status.useStarterPresets;
         _useRecommendedSetup = status.useRecommendedSetup;
-        _currentCheckInStreak = status.currentCheckInStreak;
-        _hardcoreUnlocked = status.hardcoreUnlocked;
+        _hardcoreEligibility = status.hardcoreEligibility;
+        _canSelectHardcore = status.canSelectHardcore;
         _selectedAreaIds
           ..clear()
-          ..addAll(status.activeAreaIds.isEmpty ? _defaultAreaIds : status.activeAreaIds);
+          ..addAll(
+            status.activeAreaIds.isEmpty
+                ? _defaultAreaIds
+                : status.activeAreaIds,
+          );
         _areaAttributes
           ..clear()
           ..addAll({
             for (final area in _areaOptions)
-              area.id: status.areaAttributeIds[area.id] ?? _defaultAttributesForArea(area.id),
+              area.id:
+                  status.areaAttributeIds[area.id] ??
+                  _defaultAttributesForArea(area.id),
           });
         _loading = false;
       });
@@ -196,8 +261,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _showMessage('Dê um nome para o herói antes de continuar.');
       return false;
     }
-    if (_pageIndex == 1 && _difficultyMode == 'hardcore' && !_hardcoreUnlocked) {
-      _showMessage('Hardcore só desbloqueia depois de 7 dias seguidos de check-in.');
+    if (_pageIndex == 1 &&
+        _difficultyMode == 'hardcore' &&
+        !_canSelectHardcore) {
+      _showMessage(
+        'Hardcore exige ${_hardcoreEligibility.requiredCheckIns} check-ins '
+        'v\u00e1lidos. Progresso: ${_hardcoreEligibility.progressLabel}.',
+      );
       setState(() => _difficultyMode = 'normal');
       return false;
     }
@@ -212,7 +282,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_pageIndex == 6) {
       for (final areaId in _selectedAreaIds) {
         if ((_areaAttributes[areaId] ?? const <String>[]).isEmpty) {
-          _showMessage('Cada área ativa precisa ter pelo menos um atributo vinculado.');
+          _showMessage(
+            'Cada área ativa precisa ter pelo menos um atributo vinculado.',
+          );
           return false;
         }
       }
@@ -235,8 +307,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     if (_saving) return;
-    if (_difficultyMode == 'hardcore' && !_hardcoreUnlocked) {
-      _showMessage('Hardcore ainda está bloqueado. Escolha Normal ou Difícil por enquanto.');
+    if (_difficultyMode == 'hardcore' && !_canSelectHardcore) {
+      _showMessage(
+        'Hardcore ainda est\u00e1 bloqueado: '
+        '${_hardcoreEligibility.progressLabel}.',
+      );
       await _goTo(1);
       return;
     }
@@ -280,7 +355,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: $error'), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text('Erro: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -306,7 +384,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _toggleAreaAttribute(String areaId, String attributeId) {
     setState(() {
-      final selected = List<String>.from(_areaAttributes[areaId] ?? _defaultAttributesForArea(areaId));
+      final selected = List<String>.from(
+        _areaAttributes[areaId] ?? _defaultAttributesForArea(areaId),
+      );
       if (selected.contains(attributeId)) {
         if (selected.length > 1) selected.remove(attributeId);
       } else if (selected.length < 3) {
@@ -340,7 +420,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _setDurationMonths(int months) {
-    final start = DateTime.tryParse(_campaignStartController.text.trim()) ?? DateTime.now();
+    final start =
+        DateTime.tryParse(_campaignStartController.text.trim()) ??
+        DateTime.now();
     final end = DateTime(start.year, start.month + months, start.day);
     setState(() => _campaignEndController.text = _dateKey(end));
   }
@@ -375,7 +457,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     return Scaffold(
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: GameColors.appBackgroundGradient),
+        decoration: const BoxDecoration(
+          gradient: GameColors.appBackgroundGradient,
+        ),
         child: SafeArea(
           child: Column(
             children: [
@@ -392,10 +476,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     ),
                     _DifficultyStep(
                       selectedMode: _difficultyMode,
-                      hardcoreUnlocked: _hardcoreUnlocked,
-                      currentCheckInStreak: _currentCheckInStreak,
-                      onChanged: (mode) => setState(() => _difficultyMode = mode),
-                      onLockedHardcoreTap: () => _showMessage('Complete 7 dias seguidos de check-in para liberar o Hardcore.'),
+                      hardcoreEligibility: _hardcoreEligibility,
+                      canSelectHardcore: _canSelectHardcore,
+                      onChanged: (mode) =>
+                          setState(() => _difficultyMode = mode),
+                      onLockedHardcoreTap: () => _showMessage(
+                        '${_hardcoreEligibility.progressLabel}. Complete '
+                        '${_hardcoreEligibility.requiredCheckIns} check-ins '
+                        'v\u00e1lidos para liberar o Hardcore.',
+                      ),
                     ),
                     _ConfigModeStep(
                       useRecommendedSetup: _useRecommendedSetup,
@@ -416,15 +505,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       excellentPercent: _victoryExcellentPercent,
                       onMinimumChanged: (value) => setState(() {
                         _victoryMinimumPercent = value.round();
-                        if (_victoryGoodPercent < _victoryMinimumPercent) _victoryGoodPercent = _victoryMinimumPercent;
-                        if (_victoryExcellentPercent < _victoryGoodPercent) _victoryExcellentPercent = _victoryGoodPercent;
+                        if (_victoryGoodPercent < _victoryMinimumPercent) {
+                          _victoryGoodPercent = _victoryMinimumPercent;
+                        }
+                        if (_victoryExcellentPercent < _victoryGoodPercent) {
+                          _victoryExcellentPercent = _victoryGoodPercent;
+                        }
                       }),
                       onGoodChanged: (value) => setState(() {
-                        _victoryGoodPercent = value.round().clamp(_victoryMinimumPercent, 100).toInt();
-                        if (_victoryExcellentPercent < _victoryGoodPercent) _victoryExcellentPercent = _victoryGoodPercent;
+                        _victoryGoodPercent = value
+                            .round()
+                            .clamp(_victoryMinimumPercent, 100)
+                            .toInt();
+                        if (_victoryExcellentPercent < _victoryGoodPercent) {
+                          _victoryExcellentPercent = _victoryGoodPercent;
+                        }
                       }),
                       onExcellentChanged: (value) => setState(() {
-                        _victoryExcellentPercent = value.round().clamp(_victoryGoodPercent, 100).toInt();
+                        _victoryExcellentPercent = value
+                            .round()
+                            .clamp(_victoryGoodPercent, 100)
+                            .toInt();
                       }),
                     ),
                     _AreasStep(
@@ -433,7 +534,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       onToggle: _toggleArea,
                     ),
                     _AreaAttributesStep(
-                      areas: _areaOptions.where((area) => _selectedAreaIds.contains(area.id)).toList(),
+                      areas: _areaOptions
+                          .where((area) => _selectedAreaIds.contains(area.id))
+                          .toList(),
                       attributes: _attributeOptions,
                       areaAttributes: _areaAttributes,
                       onToggleAttribute: _toggleAreaAttribute,
@@ -445,9 +548,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       difficultyLabel: _difficultyLabel(_difficultyMode),
                       campaignTitle: _campaignTitleController.text,
                       selectedAreaLabels: _selectedAreaLabels,
-                      victorySummary: '$_victoryMinimumPercent% / $_victoryGoodPercent% / $_victoryExcellentPercent%',
-                      onWaterChanged: (value) => setState(() => _waterTargetMl = value.round()),
-                      onPresetChanged: (value) => setState(() => _useStarterPresets = value),
+                      victorySummary:
+                          '$_victoryMinimumPercent% / $_victoryGoodPercent% / $_victoryExcellentPercent%',
+                      onWaterChanged: (value) =>
+                          setState(() => _waterTargetMl = value.round()),
+                      onPresetChanged: (value) =>
+                          setState(() => _useStarterPresets = value),
                     ),
                   ],
                 ),
@@ -466,19 +572,30 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   List<String> get _orderedSelectedAreaIds {
-    return [for (final area in _areaOptions) if (_selectedAreaIds.contains(area.id)) area.id];
+    return [
+      for (final area in _areaOptions)
+        if (_selectedAreaIds.contains(area.id)) area.id,
+    ];
   }
 
   List<String> get _selectedAreaLabels {
-    return [for (final area in _areaOptions) if (_selectedAreaIds.contains(area.id)) area.title];
+    return [
+      for (final area in _areaOptions)
+        if (_selectedAreaIds.contains(area.id)) area.title,
+    ];
   }
 
   List<String> _focusAreasFromSelectedAreas() {
     final focus = <String>{};
     if (_selectedAreaIds.contains('body_health')) focus.add('health');
-    if (_selectedAreaIds.contains('mind_knowledge') || _selectedAreaIds.contains('projects_career')) focus.add('study');
+    if (_selectedAreaIds.contains('mind_knowledge') ||
+        _selectedAreaIds.contains('projects_career')) {
+      focus.add('study');
+    }
     if (_selectedAreaIds.contains('spirit_purpose')) focus.add('faith');
-    if (_selectedAreaIds.contains('finance_responsibility')) focus.add('finance');
+    if (_selectedAreaIds.contains('finance_responsibility')) {
+      focus.add('finance');
+    }
     if (_selectedAreaIds.contains('routine_order')) focus.add('discipline');
     if (focus.isEmpty) focus.addAll(const ['health', 'discipline']);
     return focus.toList();
@@ -504,7 +621,12 @@ class _Header extends StatelessWidget {
     final progress = (pageIndex + 1) / _totalPages;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(GameSpacing.md, GameSpacing.md, GameSpacing.md, 0),
+      padding: const EdgeInsets.fromLTRB(
+        GameSpacing.md,
+        GameSpacing.md,
+        GameSpacing.md,
+        0,
+      ),
       child: GameHighlightCard(
         accentColor: GameColors.primary,
         child: Column(
@@ -512,9 +634,18 @@ class _Header extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.rocket_launch_rounded, color: GameColors.rewardSoft, size: 32),
+                const Icon(
+                  Icons.rocket_launch_rounded,
+                  color: GameColors.rewardSoft,
+                  size: 32,
+                ),
                 const SizedBox(width: GameSpacing.sm),
-                Expanded(child: Text('Início da Campanha', style: GameTextStyles.title)),
+                Expanded(
+                  child: Text(
+                    'Início da Campanha',
+                    style: GameTextStyles.title,
+                  ),
+                ),
                 GameChip(
                   label: '${pageIndex + 1}/$_totalPages',
                   icon: Icons.flag_rounded,
@@ -529,7 +660,12 @@ class _Header extends StatelessWidget {
               style: GameTextStyles.body,
             ),
             const SizedBox(height: GameSpacing.md),
-            GameProgressBar(value: progress, height: 8, color: GameColors.reward, showGlow: true),
+            GameProgressBar(
+              value: progress,
+              height: 8,
+              color: GameColors.reward,
+              showGlow: true,
+            ),
             if (saving) ...[
               const SizedBox(height: GameSpacing.sm),
               const LinearProgressIndicator(minHeight: 3),
@@ -542,7 +678,10 @@ class _Header extends StatelessWidget {
 }
 
 class _HeroStep extends StatelessWidget {
-  const _HeroStep({required this.nameController, required this.titleController});
+  const _HeroStep({
+    required this.nameController,
+    required this.titleController,
+  });
 
   final TextEditingController nameController;
   final TextEditingController titleController;
@@ -552,7 +691,8 @@ class _HeroStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.shield_rounded,
       title: 'Quem está entrando nessa jornada?',
-      subtitle: 'Nome e título aparecem no perfil do herói. Depois a gente evolui isso para ranks e títulos por conquista.',
+      subtitle:
+          'Nome e título aparecem no perfil do herói. Depois a gente evolui isso para ranks e títulos por conquista.',
       children: [
         TextField(
           controller: nameController,
@@ -581,24 +721,35 @@ class _HeroStep extends StatelessWidget {
 class _DifficultyStep extends StatelessWidget {
   const _DifficultyStep({
     required this.selectedMode,
-    required this.hardcoreUnlocked,
-    required this.currentCheckInStreak,
+    required this.hardcoreEligibility,
+    required this.canSelectHardcore,
     required this.onChanged,
     required this.onLockedHardcoreTap,
   });
 
   final String selectedMode;
-  final bool hardcoreUnlocked;
-  final int currentCheckInStreak;
+  final HardcoreEligibility hardcoreEligibility;
+  final bool canSelectHardcore;
   final ValueChanged<String> onChanged;
   final VoidCallback onLockedHardcoreTap;
 
   @override
   Widget build(BuildContext context) {
+    final hardcoreDescription = !canSelectHardcore
+        ? '${hardcoreEligibility.progressLabel}. Complete '
+              '${hardcoreEligibility.requiredCheckIns} check-ins '
+              'v\u00e1lidos para desbloquear.'
+        : !hardcoreEligibility.isUnlocked
+        ? 'Hardcore j\u00e1 ativo. ${hardcoreEligibility.progressLabel}; '
+              'o estado existente ser\u00e1 preservado.'
+        : '${hardcoreEligibility.progressLabel}. Penalidade de 100% do XP.';
+
     return _StepBody(
       icon: Icons.shield_moon_rounded,
       title: 'Escolha o modo de jogo',
-      subtitle: 'Hardcore existe, mas só abre depois de 7 dias de check-in. Primeiro consistência, depois pancadaria.',
+      subtitle:
+          'Hardcore exige ${hardcoreEligibility.requiredCheckIns} check-ins '
+          'v\u00e1lidos. Primeiro consist\u00eancia, depois pancadaria.',
       children: [
         _DifficultyCard(
           title: 'Normal',
@@ -611,7 +762,8 @@ class _DifficultyStep extends StatelessWidget {
         const SizedBox(height: GameSpacing.sm),
         _DifficultyCard(
           title: 'Difícil',
-          description: 'Penalidade de 50% do XP da missão vencida. Mais exigente, ainda justo.',
+          description:
+              'Penalidade de 50% do XP da missão vencida. Mais exigente, ainda justo.',
           icon: Icons.local_fire_department_rounded,
           color: GameColors.warning,
           selected: selectedMode == 'hard',
@@ -619,15 +771,15 @@ class _DifficultyStep extends StatelessWidget {
         ),
         const SizedBox(height: GameSpacing.sm),
         _DifficultyCard(
-          title: hardcoreUnlocked ? 'Hardcore' : 'Hardcore bloqueado',
-          description: hardcoreUnlocked
-              ? 'Penalidade de 100% do XP. Brutal de propósito.'
-              : '$currentCheckInStreak/7 check-ins contínuos. Complete 7 dias para desbloquear.',
-          icon: hardcoreUnlocked ? Icons.whatshot_rounded : Icons.lock_rounded,
+          title: canSelectHardcore ? 'Hardcore' : 'Hardcore bloqueado',
+          description: hardcoreDescription,
+          icon: canSelectHardcore ? Icons.whatshot_rounded : Icons.lock_rounded,
           color: GameColors.danger,
           selected: selectedMode == 'hardcore',
-          locked: !hardcoreUnlocked,
-          onTap: hardcoreUnlocked ? () => onChanged('hardcore') : onLockedHardcoreTap,
+          locked: !canSelectHardcore,
+          onTap: canSelectHardcore
+              ? () => onChanged('hardcore')
+              : onLockedHardcoreTap,
         ),
       ],
     );
@@ -635,7 +787,10 @@ class _DifficultyStep extends StatelessWidget {
 }
 
 class _ConfigModeStep extends StatelessWidget {
-  const _ConfigModeStep({required this.useRecommendedSetup, required this.onChanged});
+  const _ConfigModeStep({
+    required this.useRecommendedSetup,
+    required this.onChanged,
+  });
 
   final bool useRecommendedSetup;
   final ValueChanged<bool> onChanged;
@@ -645,11 +800,13 @@ class _ConfigModeStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.tune_rounded,
       title: 'Como quer configurar?',
-      subtitle: 'O recomendado já vem pronto. O personalizado libera ajustes de campanha, áreas, atributos e vitória sem precisar caçar configuração depois.',
+      subtitle:
+          'O recomendado já vem pronto. O personalizado libera ajustes de campanha, áreas, atributos e vitória sem precisar caçar configuração depois.',
       children: [
         _ChoiceCard(
           title: 'Usar configuração recomendada',
-          description: 'Transformação dos 20 aos 25, áreas principais e atributos já sugeridos.',
+          description:
+              'Transformação dos 20 aos 25, áreas principais e atributos já sugeridos.',
           icon: Icons.auto_awesome_rounded,
           color: GameColors.reward,
           selected: useRecommendedSetup,
@@ -658,7 +815,8 @@ class _ConfigModeStep extends StatelessWidget {
         const SizedBox(height: GameSpacing.sm),
         _ChoiceCard(
           title: 'Personalizar minha campanha',
-          description: 'Você revisa campanha, áreas e atributos logo no início.',
+          description:
+              'Você revisa campanha, áreas e atributos logo no início.',
           icon: Icons.construction_rounded,
           color: GameColors.primary,
           selected: !useRecommendedSetup,
@@ -693,7 +851,8 @@ class _CampaignStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.map_rounded,
       title: 'Configure a campanha',
-      subtitle: 'A campanha é a trajetória principal. Missões, hábitos e objetivos vão começar a apontar para ela com mais inteligência nos próximos sprints.',
+      subtitle:
+          'A campanha é a trajetória principal. Missões, hábitos e objetivos vão começar a apontar para ela com mais inteligência nos próximos sprints.',
       children: [
         TextField(
           controller: titleController,
@@ -721,7 +880,8 @@ class _CampaignStep extends StatelessWidget {
           maxLines: 4,
           decoration: const InputDecoration(
             labelText: 'Objetivo principal',
-            hintText: 'O que precisa ser verdade quando a campanha for vencida?',
+            hintText:
+                'O que precisa ser verdade quando a campanha for vencida?',
             prefixIcon: Icon(Icons.gps_fixed_rounded),
           ),
         ),
@@ -767,10 +927,27 @@ class _CampaignStep extends StatelessWidget {
           spacing: GameSpacing.xs,
           runSpacing: GameSpacing.xs,
           children: [
-            GameChip(label: '3 meses', icon: Icons.schedule_rounded, onTap: () => onDurationSelected(3)),
-            GameChip(label: '6 meses', icon: Icons.schedule_rounded, onTap: () => onDurationSelected(6)),
-            GameChip(label: '1 ano', icon: Icons.schedule_rounded, onTap: () => onDurationSelected(12)),
-            GameChip(label: '5 anos', icon: Icons.schedule_rounded, selected: true, onTap: () => onDurationSelected(60)),
+            GameChip(
+              label: '3 meses',
+              icon: Icons.schedule_rounded,
+              onTap: () => onDurationSelected(3),
+            ),
+            GameChip(
+              label: '6 meses',
+              icon: Icons.schedule_rounded,
+              onTap: () => onDurationSelected(6),
+            ),
+            GameChip(
+              label: '1 ano',
+              icon: Icons.schedule_rounded,
+              onTap: () => onDurationSelected(12),
+            ),
+            GameChip(
+              label: '5 anos',
+              icon: Icons.schedule_rounded,
+              selected: true,
+              onTap: () => onDurationSelected(60),
+            ),
           ],
         ),
       ],
@@ -800,12 +977,14 @@ class _VictoryStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.emoji_events_rounded,
       title: 'Padrões de vitória',
-      subtitle: 'Esses valores definem como a campanha interpreta progresso: vitória mínima, boa ou excelente.',
+      subtitle:
+          'Esses valores definem como a campanha interpreta progresso: vitória mínima, boa ou excelente.',
       children: [
         _SliderCard(
           title: 'Vitória mínima',
           valueLabel: '$minimumPercent%',
-          description: 'A campanha avançou o suficiente para ser considerada vencida no básico.',
+          description:
+              'A campanha avançou o suficiente para ser considerada vencida no básico.',
           color: GameColors.success,
           value: minimumPercent.toDouble(),
           min: 40,
@@ -840,7 +1019,11 @@ class _VictoryStep extends StatelessWidget {
 }
 
 class _AreasStep extends StatelessWidget {
-  const _AreasStep({required this.options, required this.selectedAreaIds, required this.onToggle});
+  const _AreasStep({
+    required this.options,
+    required this.selectedAreaIds,
+    required this.onToggle,
+  });
 
   final List<_AreaOption> options;
   final Set<String> selectedAreaIds;
@@ -851,7 +1034,8 @@ class _AreasStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.grid_view_rounded,
       title: 'Áreas da vida',
-      subtitle: 'Essas áreas serão usadas para sugerir atributos e, depois, alimentar capítulos da campanha automaticamente.',
+      subtitle:
+          'Essas áreas serão usadas para sugerir atributos e, depois, alimentar capítulos da campanha automaticamente.',
       children: [
         for (final option in options) ...[
           _AreaCard(
@@ -884,7 +1068,8 @@ class _AreaAttributesStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.account_tree_rounded,
       title: 'Atributos por área',
-      subtitle: 'Escolha até 3 atributos por área. A ordem importa: primeiro recebe mais peso, depois vem o segundo e terceiro.',
+      subtitle:
+          'Escolha até 3 atributos por área. A ordem importa: primeiro recebe mais peso, depois vem o segundo e terceiro.',
       children: [
         for (final area in areas) ...[
           GameCard(
@@ -899,7 +1084,9 @@ class _AreaAttributesStep extends StatelessWidget {
                   children: [
                     Icon(area.icon, color: area.color),
                     const SizedBox(width: GameSpacing.xs),
-                    Expanded(child: Text(area.title, style: GameTextStyles.cardTitle)),
+                    Expanded(
+                      child: Text(area.title, style: GameTextStyles.cardTitle),
+                    ),
                   ],
                 ),
                 const SizedBox(height: GameSpacing.sm),
@@ -909,10 +1096,14 @@ class _AreaAttributesStep extends StatelessWidget {
                   children: [
                     for (final attribute in attributes)
                       GameChip(
-                        label: _chipLabel(areaAttributes[area.id] ?? const <String>[], attribute),
+                        label: _chipLabel(
+                          areaAttributes[area.id] ?? const <String>[],
+                          attribute,
+                        ),
                         icon: attribute.icon,
                         color: attribute.color,
-                        selected: (areaAttributes[area.id] ?? const <String>[]).contains(attribute.id),
+                        selected: (areaAttributes[area.id] ?? const <String>[])
+                            .contains(attribute.id),
                         onTap: () => onToggleAttribute(area.id, attribute.id),
                       ),
                   ],
@@ -961,7 +1152,8 @@ class _FinalStep extends StatelessWidget {
     return _StepBody(
       icon: Icons.fact_check_rounded,
       title: 'Revisão final',
-      subtitle: 'Últimos ajustes antes de iniciar. Isso evita começar perdido e ter que configurar tudo no susto.',
+      subtitle:
+          'Últimos ajustes antes de iniciar. Isso evita começar perdido e ter que configurar tudo no susto.',
       children: [
         GameCard(
           backgroundColor: GameColors.surfaceSoft,
@@ -973,7 +1165,12 @@ class _FinalStep extends StatelessWidget {
                 children: [
                   const Icon(Icons.water_drop_rounded, color: GameColors.info),
                   const SizedBox(width: GameSpacing.sm),
-                  Expanded(child: Text('Meta inicial de água', style: GameTextStyles.cardTitle)),
+                  Expanded(
+                    child: Text(
+                      'Meta inicial de água',
+                      style: GameTextStyles.cardTitle,
+                    ),
+                  ),
                   Text('$waterTargetMl ml', style: GameTextStyles.statValue),
                 ],
               ),
@@ -985,7 +1182,10 @@ class _FinalStep extends StatelessWidget {
                 label: '$waterTargetMl ml',
                 onChanged: onWaterChanged,
               ),
-              Text('Começa simples. Dá pra ajustar depois na tela de Saúde.', style: GameTextStyles.caption),
+              Text(
+                'Começa simples. Dá pra ajustar depois na tela de Saúde.',
+                style: GameTextStyles.caption,
+              ),
             ],
           ),
         ),
@@ -997,7 +1197,10 @@ class _FinalStep extends StatelessWidget {
             contentPadding: EdgeInsets.zero,
             value: useStarterPresets,
             onChanged: onPresetChanged,
-            title: Text('Ativar hábitos/presets iniciais', style: GameTextStyles.cardTitle),
+            title: Text(
+              'Ativar hábitos/presets iniciais',
+              style: GameTextStyles.cardTitle,
+            ),
             subtitle: Text(
               'Reforça hábitos essenciais e cria presets leves conforme as áreas escolhidas.',
               style: GameTextStyles.caption,
@@ -1013,12 +1216,38 @@ class _FinalStep extends StatelessWidget {
             children: [
               Text('Resumo', style: GameTextStyles.cardTitle),
               const SizedBox(height: GameSpacing.sm),
-              _SummaryLine(icon: Icons.shield_moon_rounded, label: 'Dificuldade', value: difficultyLabel),
-              _SummaryLine(icon: Icons.map_rounded, label: 'Campanha', value: campaignTitle.trim().isEmpty ? 'Transformação dos 20 aos 25' : campaignTitle.trim()),
-              _SummaryLine(icon: Icons.grid_view_rounded, label: 'Áreas', value: selectedAreaLabels.join(', ')),
-              _SummaryLine(icon: Icons.emoji_events_rounded, label: 'Vitórias', value: victorySummary),
-              _SummaryLine(icon: Icons.water_drop_rounded, label: 'Água', value: '$waterTargetMl ml por dia'),
-              _SummaryLine(icon: Icons.auto_awesome_rounded, label: 'Modo', value: useRecommendedSetup ? 'Recomendado' : 'Personalizado'),
+              _SummaryLine(
+                icon: Icons.shield_moon_rounded,
+                label: 'Dificuldade',
+                value: difficultyLabel,
+              ),
+              _SummaryLine(
+                icon: Icons.map_rounded,
+                label: 'Campanha',
+                value: campaignTitle.trim().isEmpty
+                    ? 'Transformação dos 20 aos 25'
+                    : campaignTitle.trim(),
+              ),
+              _SummaryLine(
+                icon: Icons.grid_view_rounded,
+                label: 'Áreas',
+                value: selectedAreaLabels.join(', '),
+              ),
+              _SummaryLine(
+                icon: Icons.emoji_events_rounded,
+                label: 'Vitórias',
+                value: victorySummary,
+              ),
+              _SummaryLine(
+                icon: Icons.water_drop_rounded,
+                label: 'Água',
+                value: '$waterTargetMl ml por dia',
+              ),
+              _SummaryLine(
+                icon: Icons.auto_awesome_rounded,
+                label: 'Modo',
+                value: useRecommendedSetup ? 'Recomendado' : 'Personalizado',
+              ),
               _SummaryLine(
                 icon: Icons.inventory_2_rounded,
                 label: 'Presets',
@@ -1110,7 +1339,9 @@ class _DifficultyCard extends StatelessWidget {
     final effectiveColor = locked ? GameColors.textMuted : color;
     return GameCard(
       onTap: onTap,
-      backgroundColor: selected ? effectiveColor.withValues(alpha: 0.16) : GameColors.surfaceSoft,
+      backgroundColor: selected
+          ? effectiveColor.withValues(alpha: 0.16)
+          : GameColors.surfaceSoft,
       borderColor: selected ? effectiveColor : GameColors.border,
       padding: const EdgeInsets.all(GameSpacing.md),
       child: Row(
@@ -1131,8 +1362,8 @@ class _DifficultyCard extends StatelessWidget {
             locked
                 ? Icons.lock_rounded
                 : selected
-                    ? Icons.radio_button_checked_rounded
-                    : Icons.radio_button_off_rounded,
+                ? Icons.radio_button_checked_rounded
+                : Icons.radio_button_off_rounded,
             color: selected ? effectiveColor : GameColors.textMuted,
           ),
         ],
@@ -1162,7 +1393,9 @@ class _ChoiceCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GameCard(
       onTap: onTap,
-      backgroundColor: selected ? color.withValues(alpha: 0.16) : GameColors.surfaceSoft,
+      backgroundColor: selected
+          ? color.withValues(alpha: 0.16)
+          : GameColors.surfaceSoft,
       borderColor: selected ? color : GameColors.border,
       padding: const EdgeInsets.all(GameSpacing.md),
       child: Row(
@@ -1179,7 +1412,10 @@ class _ChoiceCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(selected ? Icons.check_circle_rounded : Icons.circle_outlined, color: selected ? color : GameColors.textMuted),
+          Icon(
+            selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+            color: selected ? color : GameColors.textMuted,
+          ),
         ],
       ),
     );
@@ -1187,7 +1423,11 @@ class _ChoiceCard extends StatelessWidget {
 }
 
 class _AreaCard extends StatelessWidget {
-  const _AreaCard({required this.option, required this.selected, required this.onTap});
+  const _AreaCard({
+    required this.option,
+    required this.selected,
+    required this.onTap,
+  });
 
   final _AreaOption option;
   final bool selected;
@@ -1197,7 +1437,9 @@ class _AreaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GameCard(
       onTap: onTap,
-      backgroundColor: selected ? option.color.withValues(alpha: 0.16) : GameColors.surfaceSoft,
+      backgroundColor: selected
+          ? option.color.withValues(alpha: 0.16)
+          : GameColors.surfaceSoft,
       borderColor: selected ? option.color : GameColors.border,
       accentColor: selected ? option.color : null,
       padding: const EdgeInsets.all(GameSpacing.md),
@@ -1215,7 +1457,10 @@ class _AreaCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(selected ? Icons.check_circle_rounded : Icons.circle_outlined, color: selected ? option.color : GameColors.textMuted),
+          Icon(
+            selected ? Icons.check_circle_rounded : Icons.circle_outlined,
+            color: selected ? option.color : GameColors.textMuted,
+          ),
         ],
       ),
     );
@@ -1258,7 +1503,10 @@ class _SliderCard extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(title, style: GameTextStyles.cardTitle)),
-              Text(valueLabel, style: GameTextStyles.statValue.copyWith(color: color)),
+              Text(
+                valueLabel,
+                style: GameTextStyles.statValue.copyWith(color: color),
+              ),
             ],
           ),
           const SizedBox(height: GameSpacing.xs),
@@ -1278,7 +1526,11 @@ class _SliderCard extends StatelessWidget {
 }
 
 class _SummaryLine extends StatelessWidget {
-  const _SummaryLine({required this.icon, required this.label, required this.value});
+  const _SummaryLine({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   final IconData icon;
   final String label;
@@ -1293,7 +1545,12 @@ class _SummaryLine extends StatelessWidget {
         children: [
           Icon(icon, size: 18, color: GameColors.textMuted),
           const SizedBox(width: GameSpacing.xs),
-          Text('$label: ', style: GameTextStyles.caption.copyWith(color: GameColors.textSecondary)),
+          Text(
+            '$label: ',
+            style: GameTextStyles.caption.copyWith(
+              color: GameColors.textSecondary,
+            ),
+          ),
           Expanded(child: Text(value, style: GameTextStyles.caption)),
         ],
       ),
@@ -1302,7 +1559,12 @@ class _SummaryLine extends StatelessWidget {
 }
 
 class _Footer extends StatelessWidget {
-  const _Footer({required this.pageIndex, required this.saving, required this.onBack, required this.onNext});
+  const _Footer({
+    required this.pageIndex,
+    required this.saving,
+    required this.onBack,
+    required this.onNext,
+  });
 
   final int pageIndex;
   final bool saving;
@@ -1314,7 +1576,12 @@ class _Footer extends StatelessWidget {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(GameSpacing.md, GameSpacing.sm, GameSpacing.md, GameSpacing.md),
+        padding: const EdgeInsets.fromLTRB(
+          GameSpacing.md,
+          GameSpacing.sm,
+          GameSpacing.md,
+          GameSpacing.md,
+        ),
         child: Row(
           children: [
             Expanded(
@@ -1327,8 +1594,12 @@ class _Footer extends StatelessWidget {
             const SizedBox(width: GameSpacing.sm),
             Expanded(
               child: GamePrimaryButton(
-                label: pageIndex >= _totalPages - 1 ? 'Iniciar campanha' : 'Continuar',
-                icon: pageIndex >= _totalPages - 1 ? Icons.rocket_launch_rounded : Icons.arrow_forward_rounded,
+                label: pageIndex >= _totalPages - 1
+                    ? 'Iniciar campanha'
+                    : 'Continuar',
+                icon: pageIndex >= _totalPages - 1
+                    ? Icons.rocket_launch_rounded
+                    : Icons.arrow_forward_rounded,
                 onPressed: saving ? null : onNext,
               ),
             ),
@@ -1356,7 +1627,12 @@ class _AreaOption {
 }
 
 class _AttributeOption {
-  const _AttributeOption({required this.id, required this.title, required this.icon, required this.color});
+  const _AttributeOption({
+    required this.id,
+    required this.title,
+    required this.icon,
+    required this.color,
+  });
 
   final String id;
   final String title;
@@ -1380,7 +1656,11 @@ List<String> _defaultAttributesForArea(String areaId) {
     'spirit_purpose' => const ['faith', 'clarity', 'discipline'],
     'projects_career' => const ['focus', 'responsibility', 'clarity'],
     'creation_expression' => const ['creativity', 'focus', 'clarity'],
-    'finance_responsibility' => const ['responsibility', 'discipline', 'clarity'],
+    'finance_responsibility' => const [
+      'responsibility',
+      'discipline',
+      'clarity',
+    ],
     'routine_order' => const ['discipline', 'responsibility', 'clarity'],
     _ => const ['discipline', 'focus', 'clarity'],
   };

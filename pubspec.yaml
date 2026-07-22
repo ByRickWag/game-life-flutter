@@ -1,7 +1,7 @@
 name: game_life_flutter_release
 description: "Game Life — evolução pessoal gamificada local-first para campanha, compromisso e ritmo diário."
 publish_to: 'none'
-version: 4.5.0+57
+version: 4.5.1+58
 
 environment:
   sdk: ^3.12.2
@@ -19,6 +19,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.4.2
 
 flutter:
   uses-material-design: true

@@ -70,9 +70,9 @@ class V2ActionHubPage extends StatelessWidget {
     final onPressed = action.onPressed;
 
     if (destination != null) {
-      await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => destination),
-      );
+      await Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => destination));
       return;
     }
 
@@ -128,10 +128,7 @@ class V2ActionHubPage extends StatelessWidget {
 }
 
 class _V2ActionTile extends StatelessWidget {
-  const _V2ActionTile({
-    required this.action,
-    required this.onTap,
-  });
+  const _V2ActionTile({required this.action, required this.onTap});
 
   final V2ActionSpec action;
   final VoidCallback onTap;
@@ -182,6 +179,18 @@ class _V2ActionTile extends StatelessWidget {
   }
 }
 
+class _CampaignRoutePage extends StatelessWidget {
+  const _CampaignRoutePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Campanha principal')),
+      body: const CampaignScreen(),
+    );
+  }
+}
+
 class V2QuickActionsPage extends StatelessWidget {
   const V2QuickActionsPage({super.key});
 
@@ -189,10 +198,12 @@ class V2QuickActionsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const V2ActionHubPage(
       title: 'Ações rápidas',
-      subtitle: 'Centralize aqui as ações de execução: criar, concluir, registrar e atualizar progresso.',
+      subtitle:
+          'Centralize aqui as ações de execução: criar, concluir, registrar e atualizar progresso.',
       icon: Icons.flash_on_rounded,
       accentColor: GameColors.reward,
-      note: 'O Dashboard agora fica mais limpo. As ações de execução ficam reunidas nesta tela.',
+      note:
+          'O Dashboard agora fica mais limpo. As ações de execução ficam reunidas nesta tela.',
       actions: [
         V2ActionSpec(
           label: 'Check-in diário',
@@ -210,35 +221,40 @@ class V2QuickActionsPage extends StatelessWidget {
         ),
         V2ActionSpec(
           label: 'Registrar hábito',
-          description: 'Abra hábitos para registrar água, treino, leitura ou consumo.',
+          description:
+              'Abra hábitos para registrar água, treino, leitura ou consumo.',
           icon: Icons.repeat_rounded,
           destination: HabitListScreen(),
           color: GameColors.vigor,
         ),
         V2ActionSpec(
           label: 'Água e alimentação',
-          description: 'Registre água e controle limites de refrigerante, doces e ultraprocessados.',
+          description:
+              'Registre água e controle limites de refrigerante, doces e ultraprocessados.',
           icon: Icons.health_and_safety_rounded,
           destination: HealthScreen(),
           color: GameColors.info,
         ),
         V2ActionSpec(
           label: 'Conquistas',
-          description: 'Veja brasões desbloqueados e sincronize seu progresso automático.',
+          description:
+              'Veja brasões desbloqueados e sincronize seu progresso automático.',
           icon: Icons.emoji_events_rounded,
           destination: AchievementsScreen(),
           color: GameColors.reward,
         ),
         V2ActionSpec(
           label: 'Campanha principal',
-          description: 'Veja os marcos automáticos da Transformação dos 20 aos 25.',
+          description:
+              'Veja os marcos automáticos da Transformação dos 20 aos 25.',
           icon: Icons.map_rounded,
-          destination: CampaignScreen(),
+          destination: _CampaignRoutePage(),
           color: GameColors.faith,
         ),
         V2ActionSpec(
           label: 'Criar hábito',
-          description: 'Configure um hábito de construção, redução, manutenção ou evitação.',
+          description:
+              'Configure um hábito de construção, redução, manutenção ou evitação.',
           icon: Icons.add_task_rounded,
           destination: HabitFormScreen(),
           color: GameColors.success,
@@ -259,42 +275,48 @@ class V2QuickActionsPage extends StatelessWidget {
         ),
         V2ActionSpec(
           label: 'Atualizar objetivo',
-          description: 'Abra seus objetivos para registrar avanço ou concluir metas.',
+          description:
+              'Abra seus objetivos para registrar avanço ou concluir metas.',
           icon: Icons.add_chart_rounded,
           destination: ObjectiveListScreen(),
           color: GameColors.clarity,
         ),
         V2ActionSpec(
           label: 'Iniciar sessão com contador',
-          description: 'Abra o contador de foco com check-in de presença e teto de XP.',
+          description:
+              'Abra o contador de foco com check-in de presença e teto de XP.',
           icon: Icons.play_circle_fill_rounded,
           destination: SessionTimerScreen(),
           color: GameColors.primary,
         ),
         V2ActionSpec(
           label: 'Registrar sessão manual',
-          description: 'Informe uma duração manualmente quando já souber o tempo dedicado.',
+          description:
+              'Informe uma duração manualmente quando já souber o tempo dedicado.',
           icon: Icons.edit_calendar_rounded,
           destination: SessionFormScreen(),
           color: GameColors.info,
         ),
         V2ActionSpec(
           label: 'Cofre do Reino',
-          description: 'Registre depósitos, retiradas e metas financeiras reais.',
+          description:
+              'Registre depósitos, retiradas e metas financeiras reais.',
           icon: Icons.savings_rounded,
           destination: VaultScreen(),
           color: GameColors.reward,
         ),
         V2ActionSpec(
           label: 'Loja do Reino',
-          description: 'Compre recompensas com coins e libere compras reais planejadas.',
+          description:
+              'Compre recompensas com coins e libere compras reais planejadas.',
           icon: Icons.storefront_rounded,
           destination: ShopScreen(),
           color: GameColors.primary,
         ),
         V2ActionSpec(
           label: 'Criar item da loja',
-          description: 'Configure um voucher, recompensa ou compra real com cofre vinculado.',
+          description:
+              'Configure um voucher, recompensa ou compra real com cofre vinculado.',
           icon: Icons.add_shopping_cart_rounded,
           destination: ShopItemFormScreen(),
           color: GameColors.success,
@@ -332,7 +354,8 @@ class V2MissionHubPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const V2ActionHubPage(
       title: 'Missões',
-      subtitle: 'Rotinas recorrentes e desafios pontuais que geram XP, coins e atributos.',
+      subtitle:
+          'Rotinas recorrentes e desafios pontuais que geram XP, coins e atributos.',
       icon: Icons.flag_rounded,
       actions: [
         V2ActionSpec(
@@ -343,7 +366,8 @@ class V2MissionHubPage extends StatelessWidget {
         ),
         V2ActionSpec(
           label: 'Criar missão',
-          description: 'Adicione uma missão diária, semanal, mensal ou especial.',
+          description:
+              'Adicione uma missão diária, semanal, mensal ou especial.',
           icon: Icons.add_circle_rounded,
           destination: MissionFormScreen(),
           color: GameColors.success,
@@ -357,14 +381,16 @@ class V2MissionHubPage extends StatelessWidget {
         ),
         V2ActionSpec(
           label: 'Saúde prática',
-          description: 'Abra água e alimentação para registrar hidratação e limites semanais.',
+          description:
+              'Abra água e alimentação para registrar hidratação e limites semanais.',
           icon: Icons.health_and_safety_rounded,
           destination: HealthScreen(),
           color: GameColors.info,
         ),
         V2ActionSpec(
           label: 'Criar hábito',
-          description: 'Crie metas de água, treino, leitura ou limites de consumo.',
+          description:
+              'Crie metas de água, treino, leitura ou limites de consumo.',
           icon: Icons.add_task_rounded,
           destination: HabitFormScreen(),
           color: GameColors.success,
@@ -381,13 +407,15 @@ class V2ObjectiveHubPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const V2ActionHubPage(
       title: 'Objetivos',
-      subtitle: 'Metas mensuráveis para acompanhar avanço real até a conclusão.',
+      subtitle:
+          'Metas mensuráveis para acompanhar avanço real até a conclusão.',
       icon: Icons.track_changes_rounded,
       accentColor: GameColors.info,
       actions: [
         V2ActionSpec(
           label: 'Ver objetivos',
-          description: 'Abra objetivos ativos, registre progresso e conclua metas.',
+          description:
+              'Abra objetivos ativos, registre progresso e conclua metas.',
           icon: Icons.list_alt_rounded,
           destination: ObjectiveListScreen(),
           color: GameColors.info,
@@ -434,7 +462,11 @@ class V2CampaignPage extends StatelessWidget {
         final campaign = data?.campaign ?? const <String, Object?>{};
         final hero = data?.hero ?? const <String, Object?>{};
         final stats = data?.stats;
-        final title = readString(campaign, 'title', fallback: 'Transformação 20–25');
+        final title = readString(
+          campaign,
+          'title',
+          fallback: 'Transformação 20–25',
+        );
         final description = readString(
           campaign,
           'description',
@@ -455,7 +487,11 @@ class V2CampaignPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.auto_awesome_rounded, color: GameColors.faith, size: 34),
+                      const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: GameColors.faith,
+                        size: 34,
+                      ),
                       const SizedBox(height: GameSpacing.sm),
                       Text(title, style: GameTextStyles.title),
                       const SizedBox(height: GameSpacing.xs),
@@ -499,7 +535,8 @@ class V2CampaignPage extends StatelessWidget {
                 const SizedBox(height: GameSpacing.md),
                 const GameSectionHeader(
                   title: 'Estrutura da Jornada',
-                  subtitle: 'A campanha conecta missões, objetivos e progresso pessoal.',
+                  subtitle:
+                      'A campanha conecta missões, objetivos e progresso pessoal.',
                   icon: Icons.account_tree_rounded,
                 ),
                 const GameCard(
@@ -521,17 +558,40 @@ class V2CampaignPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Marcadores da jornada', style: GameTextStyles.cardTitle),
+                      const Text(
+                        'Marcadores da jornada',
+                        style: GameTextStyles.cardTitle,
+                      ),
                       const SizedBox(height: GameSpacing.sm),
                       Wrap(
                         spacing: GameSpacing.xs,
                         runSpacing: GameSpacing.xs,
                         children: [
-                          GameChip(label: '${stats?.missions ?? 0} missões', icon: Icons.flag_rounded, color: GameColors.primary),
-                          GameChip(label: '${stats?.habits ?? 0} hábitos', icon: Icons.repeat_rounded, color: GameColors.vigor),
-                          GameChip(label: '${stats?.objectives ?? 0} objetivos', icon: Icons.track_changes_rounded, color: GameColors.info),
-                          GameChip(label: '${stats?.sessions ?? 0} sessões', icon: Icons.timer_rounded, color: GameColors.success),
-                          GameChip(label: '${stats?.projects ?? 0} projetos', icon: Icons.folder_special_rounded, color: GameColors.reward),
+                          GameChip(
+                            label: '${stats?.missions ?? 0} missões',
+                            icon: Icons.flag_rounded,
+                            color: GameColors.primary,
+                          ),
+                          GameChip(
+                            label: '${stats?.habits ?? 0} hábitos',
+                            icon: Icons.repeat_rounded,
+                            color: GameColors.vigor,
+                          ),
+                          GameChip(
+                            label: '${stats?.objectives ?? 0} objetivos',
+                            icon: Icons.track_changes_rounded,
+                            color: GameColors.info,
+                          ),
+                          GameChip(
+                            label: '${stats?.sessions ?? 0} sessões',
+                            icon: Icons.timer_rounded,
+                            color: GameColors.success,
+                          ),
+                          GameChip(
+                            label: '${stats?.projects ?? 0} projetos',
+                            icon: Icons.folder_special_rounded,
+                            color: GameColors.reward,
+                          ),
                         ],
                       ),
                     ],
@@ -574,7 +634,11 @@ class V2FocusRegisterPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.timer_rounded, color: GameColors.success, size: 34),
+                  Icon(
+                    Icons.timer_rounded,
+                    color: GameColors.success,
+                    size: 34,
+                  ),
                   SizedBox(height: GameSpacing.sm),
                   Text('Sessão com contador', style: GameTextStyles.title),
                   SizedBox(height: GameSpacing.xs),
@@ -647,7 +711,11 @@ class _FocusTypeGrid extends StatelessWidget {
     _FocusTypeItem('Devocional', Icons.auto_awesome_rounded, GameColors.faith),
     _FocusTypeItem('Programação', Icons.code_rounded, GameColors.focus),
     _FocusTypeItem('Projeto', Icons.folder_special_rounded, GameColors.reward),
-    _FocusTypeItem('Organização', Icons.checklist_rounded, GameColors.discipline),
+    _FocusTypeItem(
+      'Organização',
+      Icons.checklist_rounded,
+      GameColors.discipline,
+    ),
   ];
 
   @override
@@ -681,17 +749,27 @@ class _FocusTypeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GameCompactCard(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const SessionTimerScreen()),
-      ),
+      onTap: () => Navigator.of(
+        context,
+      ).push(MaterialPageRoute(builder: (_) => const SessionTimerScreen())),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(item.icon, color: item.color),
           const SizedBox(height: GameSpacing.xs),
-          Text(item.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: GameTextStyles.cardTitle),
+          Text(
+            item.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GameTextStyles.cardTitle,
+          ),
           const SizedBox(height: 2),
-          Text('Iniciar timer', maxLines: 1, overflow: TextOverflow.ellipsis, style: GameTextStyles.caption),
+          Text(
+            'Iniciar timer',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GameTextStyles.caption,
+          ),
         ],
       ),
     );
@@ -728,7 +806,8 @@ class V2SessionsRecentPage extends StatelessWidget {
       builder: (context, snapshot) {
         final sessions = snapshot.data ?? const <Map<String, Object?>>[];
 
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
 
@@ -743,11 +822,18 @@ class V2SessionsRecentPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.history_rounded, color: GameColors.info, size: 34),
+                      Icon(
+                        Icons.history_rounded,
+                        color: GameColors.info,
+                        size: 34,
+                      ),
                       SizedBox(height: GameSpacing.sm),
                       Text('Sessões recentes', style: GameTextStyles.title),
                       SizedBox(height: GameSpacing.xs),
-                      Text('Revise seus últimos blocos de foco sem sair do grupo Foco.', style: GameTextStyles.body),
+                      Text(
+                        'Revise seus últimos blocos de foco sem sair do grupo Foco.',
+                        style: GameTextStyles.body,
+                      ),
                     ],
                   ),
                 ),
@@ -755,11 +841,14 @@ class V2SessionsRecentPage extends StatelessWidget {
                 if (sessions.isEmpty)
                   GameEmptyState(
                     title: 'Nenhuma sessão registrada',
-                    message: 'Registre sua primeira sessão para começar a alimentar este painel.',
+                    message:
+                        'Registre sua primeira sessão para começar a alimentar este painel.',
                     icon: Icons.timer_off_rounded,
                     actionLabel: 'Iniciar contador',
                     onAction: () => Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const SessionTimerScreen()),
+                      MaterialPageRoute(
+                        builder: (_) => const SessionTimerScreen(),
+                      ),
                     ),
                   )
                 else
@@ -772,7 +861,9 @@ class V2SessionsRecentPage extends StatelessWidget {
                   label: 'Iniciar contador',
                   icon: Icons.play_arrow_rounded,
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SessionTimerScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const SessionTimerScreen(),
+                    ),
                   ),
                 ),
                 const SizedBox(height: GameSpacing.sm),
@@ -780,7 +871,9 @@ class V2SessionsRecentPage extends StatelessWidget {
                   label: 'Abrir lista completa',
                   icon: Icons.open_in_new_rounded,
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SessionListScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const SessionListScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -849,7 +942,11 @@ class _V2RecentSessionTile extends StatelessWidget {
   }
 }
 
-String _readString(Map<String, Object?> map, String key, {String fallback = ''}) {
+String _readString(
+  Map<String, Object?> map,
+  String key, {
+  String fallback = '',
+}) {
   final value = map[key];
   if (value == null) return fallback;
   final text = value.toString();
@@ -937,8 +1034,16 @@ class V2HeroPage extends StatelessWidget {
         final level = hero == null ? 1 : readInt(hero, 'level');
         final xp = readInt(hero ?? const <String, Object?>{}, 'xp');
         final coins = readInt(hero ?? const <String, Object?>{}, 'coins');
-        final name = readString(hero ?? const <String, Object?>{}, 'name', fallback: 'Herói da Jornada');
-        final title = readString(hero ?? const <String, Object?>{}, 'title', fallback: 'Iniciante da Transformação');
+        final name = readString(
+          hero ?? const <String, Object?>{},
+          'name',
+          fallback: 'Herói da Jornada',
+        );
+        final title = readString(
+          hero ?? const <String, Object?>{},
+          'title',
+          fallback: 'Iniciante da Transformação',
+        );
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -950,7 +1055,11 @@ class V2HeroPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.shield_rounded, color: GameColors.rewardSoft, size: 36),
+                      const Icon(
+                        Icons.shield_rounded,
+                        color: GameColors.rewardSoft,
+                        size: 36,
+                      ),
                       const SizedBox(height: GameSpacing.sm),
                       Text(name, style: GameTextStyles.title),
                       const SizedBox(height: GameSpacing.xs),
@@ -1013,7 +1122,11 @@ class V2ReportPage extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.description_rounded, color: GameColors.info, size: 34),
+                      Icon(
+                        Icons.description_rounded,
+                        color: GameColors.info,
+                        size: 34,
+                      ),
                       SizedBox(height: GameSpacing.sm),
                       Text('Relatório', style: GameTextStyles.title),
                       SizedBox(height: GameSpacing.xs),
@@ -1063,7 +1176,9 @@ class V2ReportPage extends StatelessWidget {
                   label: 'Abrir relatório completo',
                   icon: Icons.open_in_new_rounded,
                   onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SystemReportScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const SystemReportScreen(),
+                    ),
                   ),
                 ),
               ],
@@ -1082,7 +1197,8 @@ class V2HistoryHubPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const V2ActionHubPage(
       title: 'Histórico',
-      subtitle: 'Linha do tempo da sua jornada, recompensas e eventos importantes.',
+      subtitle:
+          'Linha do tempo da sua jornada, recompensas e eventos importantes.',
       icon: Icons.history_rounded,
       accentColor: GameColors.info,
       actions: [

@@ -18,7 +18,8 @@ class SystemScreen extends StatefulWidget {
 
 class _SystemScreenState extends State<SystemScreen> {
   final SystemRepository _repository = const SystemRepository();
-  final OnboardingRepository _onboardingRepository = const OnboardingRepository();
+  final OnboardingRepository _onboardingRepository =
+      const OnboardingRepository();
   final DifficultyService _difficultyService = DifficultyService();
 
   List<BalanceSetting> _settings = const [];
@@ -50,8 +51,10 @@ class _SystemScreenState extends State<SystemScreen> {
       final settings = await _repository.getSettings();
       final stats = await _repository.getStats();
       final path = await _repository.getDatabasePath();
-      final reminderSettings = await NotificationService.instance.getReminderSettings();
-      final reminderSummary = await NotificationService.instance.getTodaySummary();
+      final reminderSettings = await NotificationService.instance
+          .getReminderSettings();
+      final reminderSummary = await NotificationService.instance
+          .getTodaySummary();
       final difficultyProfiles = await _difficultyService.getProfiles();
       final difficultySummary = await _difficultyService.getSummary();
 
@@ -113,7 +116,8 @@ class _SystemScreenState extends State<SystemScreen> {
 
     await _runAction(
       successMessage: 'Configuração atualizada.',
-      action: () => _repository.updateSetting(setting: setting, rawValue: result),
+      action: () =>
+          _repository.updateSetting(setting: setting, rawValue: result),
     );
   }
 
@@ -134,6 +138,26 @@ class _SystemScreenState extends State<SystemScreen> {
   }
 
   Future<void> _changeDifficulty(String mode) async {
+    if (_working) return;
+
+    if (mode == 'hardcore') {
+      final summary = await _difficultyService.getSummary();
+      if (!mounted) return;
+      setState(() => _difficultySummary = summary);
+      if (!summary.canActivateHardcore) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Hardcore bloqueado: '
+              '${summary.hardcoreEligibility.progressLabel}.',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+    }
+
     final label = switch (mode) {
       'hard' => 'Difícil',
       'hardcore' => 'Hardcore',
@@ -167,14 +191,20 @@ class _SystemScreenState extends State<SystemScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(result.message),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
 
       await _load();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: $error'), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text('Erro: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() => _working = false);
@@ -254,7 +284,10 @@ class _SystemScreenState extends State<SystemScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(successMessage), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text(successMessage),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
 
       await _load();
@@ -262,25 +295,33 @@ class _SystemScreenState extends State<SystemScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro: $error'), behavior: SnackBarBehavior.floating),
+        SnackBar(
+          content: Text('Erro: $error'),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     } finally {
       if (mounted) setState(() => _working = false);
     }
   }
 
-
   Future<void> _toggleReminders(bool enabled) async {
     await _runAction(
-      successMessage: enabled ? 'Lembrete diário ativado.' : 'Lembrete diário desativado.',
-      action: () => NotificationService.instance.setDailyReminderEnabled(enabled),
+      successMessage: enabled
+          ? 'Lembrete diário ativado.'
+          : 'Lembrete diário desativado.',
+      action: () =>
+          NotificationService.instance.setDailyReminderEnabled(enabled),
     );
   }
 
   Future<void> _setReminderTime(int hour, int minute) async {
     await _runAction(
       successMessage: 'Horário do lembrete atualizado.',
-      action: () => NotificationService.instance.setDailyReminderTime(hour: hour, minute: minute),
+      action: () => NotificationService.instance.setDailyReminderTime(
+        hour: hour,
+        minute: minute,
+      ),
     );
   }
 
@@ -322,9 +363,9 @@ class _SystemScreenState extends State<SystemScreen> {
   }
 
   Future<void> _openReport() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const SystemReportScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SystemReportScreen()));
 
     if (!mounted) return;
     await _load();
@@ -379,7 +420,8 @@ class _SystemScreenState extends State<SystemScreen> {
             const SizedBox(height: GameSpacing.md),
             const GameSectionHeader(
               title: 'Dificuldade global',
-              subtitle: 'Modo de jogo, curva de nível e penalidade de XP por falha.',
+              subtitle:
+                  'Modo de jogo, curva de nível e penalidade de XP por falha.',
               icon: Icons.shield_rounded,
             ),
             _DifficultyPanel(
@@ -392,7 +434,8 @@ class _SystemScreenState extends State<SystemScreen> {
             const SizedBox(height: GameSpacing.md),
             const GameSectionHeader(
               title: 'Lembretes',
-              subtitle: 'Notificações leves para lembrar de revisar sua jornada.',
+              subtitle:
+                  'Notificações leves para lembrar de revisar sua jornada.',
               icon: Icons.notifications_active_rounded,
             ),
             _ReminderPanel(
@@ -406,7 +449,8 @@ class _SystemScreenState extends State<SystemScreen> {
             const SizedBox(height: GameSpacing.md),
             const GameSectionHeader(
               title: 'Balanceamento Lite',
-              subtitle: 'Toque em um item para editar recompensas e multiplicadores.',
+              subtitle:
+                  'Toque em um item para editar recompensas e multiplicadores.',
               icon: Icons.tune_rounded,
             ),
             _SettingGroup(
@@ -444,7 +488,10 @@ class _SystemScreenState extends State<SystemScreen> {
               title: 'Sessões de foco',
               icon: Icons.timer_rounded,
               color: GameColors.success,
-              settings: _settingsFor(const ['session_xp_per_15min', 'xp_cap_session']),
+              settings: _settingsFor(const [
+                'session_xp_per_15min',
+                'xp_cap_session',
+              ]),
               working: _working,
               onTap: _editSetting,
             ),
@@ -512,7 +559,11 @@ class _SystemHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.settings_rounded, color: GameColors.primary, size: 34),
+          const Icon(
+            Icons.settings_rounded,
+            color: GameColors.primary,
+            size: 34,
+          ),
           const SizedBox(height: GameSpacing.sm),
           Text('Configurações', style: GameTextStyles.title),
           const SizedBox(height: GameSpacing.xs),
@@ -659,7 +710,9 @@ class _MaintenancePanel extends StatelessWidget {
           Text('Banco local', style: GameTextStyles.cardTitle),
           const SizedBox(height: 4),
           Text(
-            databasePath.isEmpty ? 'Carregando caminho do banco...' : databasePath,
+            databasePath.isEmpty
+                ? 'Carregando caminho do banco...'
+                : databasePath,
             maxLines: 3,
             overflow: TextOverflow.ellipsis,
             style: GameTextStyles.caption,
@@ -669,7 +722,6 @@ class _MaintenancePanel extends StatelessWidget {
     );
   }
 }
-
 
 class _DifficultyPanel extends StatelessWidget {
   const _DifficultyPanel({
@@ -704,16 +756,24 @@ class _DifficultyPanel extends StatelessWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _modeColor(data?.activeMode ?? 'normal').withValues(alpha: 0.16),
+                  color: _modeColor(
+                    data?.activeMode ?? 'normal',
+                  ).withValues(alpha: 0.16),
                 ),
-                child: Icon(Icons.shield_rounded, color: _modeColor(data?.activeMode ?? 'normal')),
+                child: Icon(
+                  Icons.shield_rounded,
+                  color: _modeColor(data?.activeMode ?? 'normal'),
+                ),
               ),
               const SizedBox(width: GameSpacing.sm),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Modo ${data?.activeName ?? 'Normal'}', style: GameTextStyles.cardTitle),
+                    Text(
+                      'Modo ${data?.activeName ?? 'Normal'}',
+                      style: GameTextStyles.cardTitle,
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       data == null
@@ -733,13 +793,20 @@ class _DifficultyPanel extends StatelessWidget {
             _DifficultyModeTile(
               profile: profile,
               selected: profile.code == data?.activeMode,
+              locked: _isHardcoreLocked(profile, data),
+              description: _profileDescription(profile, data),
+              badgeLabel: _profileBadgeLabel(profile, data),
               working: working,
               onTap: () => onModeSelected(profile.code),
             ),
-            if (profile != profiles.last) const SizedBox(height: GameSpacing.xs),
+            if (profile != profiles.last)
+              const SizedBox(height: GameSpacing.xs),
           ],
           if (profiles.isEmpty)
-            Text('Perfis de dificuldade ainda não carregados.', style: GameTextStyles.caption),
+            Text(
+              'Perfis de dificuldade ainda não carregados.',
+              style: GameTextStyles.caption,
+            ),
           const SizedBox(height: GameSpacing.sm),
           GameSecondaryButton(
             label: 'Aplicar penalidades pendentes',
@@ -763,18 +830,64 @@ class _DifficultyPanel extends StatelessWidget {
       _ => GameColors.success,
     };
   }
+
+  bool _isHardcoreLocked(
+    DifficultyProfile profile,
+    DifficultyModeSummary? summary,
+  ) {
+    return profile.code == 'hardcore' &&
+        summary != null &&
+        !summary.canActivateHardcore;
+  }
+
+  String _profileDescription(
+    DifficultyProfile profile,
+    DifficultyModeSummary? summary,
+  ) {
+    if (profile.code != 'hardcore' || summary == null) {
+      return profile.description;
+    }
+
+    final eligibility = summary.hardcoreEligibility;
+    if (!summary.canActivateHardcore) {
+      return '${eligibility.progressLabel}. Complete '
+          '${eligibility.requiredCheckIns} check-ins v\u00e1lidos para liberar.';
+    }
+    if (summary.activeMode == 'hardcore' && !eligibility.isUnlocked) {
+      return 'Hardcore j\u00e1 ativo. ${eligibility.progressLabel}; '
+          'o estado existente ser\u00e1 preservado.';
+    }
+    return '${eligibility.progressLabel}. ${profile.description}';
+  }
+
+  String _profileBadgeLabel(
+    DifficultyProfile profile,
+    DifficultyModeSummary? summary,
+  ) {
+    if (profile.code == 'hardcore' && summary != null) {
+      final eligibility = summary.hardcoreEligibility;
+      return '${eligibility.validCheckIns}/${eligibility.requiredCheckIns}';
+    }
+    return '${profile.penaltyPercent}% XP';
+  }
 }
 
 class _DifficultyModeTile extends StatelessWidget {
   const _DifficultyModeTile({
     required this.profile,
     required this.selected,
+    required this.locked,
+    required this.description,
+    required this.badgeLabel,
     required this.working,
     required this.onTap,
   });
 
   final DifficultyProfile profile;
   final bool selected;
+  final bool locked;
+  final String description;
+  final String badgeLabel;
   final bool working;
   final VoidCallback onTap;
 
@@ -785,9 +898,12 @@ class _DifficultyModeTile extends StatelessWidget {
       'hardcore' => GameColors.danger,
       _ => GameColors.success,
     };
+    final effectiveColor = locked ? GameColors.textMuted : color;
 
     return Material(
-      color: selected ? color.withValues(alpha: 0.16) : GameColors.surface,
+      color: selected
+          ? effectiveColor.withValues(alpha: 0.16)
+          : GameColors.surface,
       borderRadius: GameRadius.button,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -797,7 +913,14 @@ class _DifficultyModeTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(selected ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, color: color),
+              Icon(
+                locked
+                    ? Icons.lock_rounded
+                    : selected
+                    ? Icons.check_circle_rounded
+                    : Icons.radio_button_unchecked_rounded,
+                color: effectiveColor,
+              ),
               const SizedBox(width: GameSpacing.sm),
               Expanded(
                 child: Column(
@@ -805,14 +928,19 @@ class _DifficultyModeTile extends StatelessWidget {
                   children: [
                     Text(profile.name, style: GameTextStyles.cardTitle),
                     const SizedBox(height: 2),
-                    Text(profile.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GameTextStyles.caption),
+                    Text(
+                      description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: GameTextStyles.caption,
+                    ),
                   ],
                 ),
               ),
               const SizedBox(width: GameSpacing.xs),
               GameChip(
-                label: '${profile.penaltyPercent}% XP',
-                color: color,
+                label: badgeLabel,
+                color: effectiveColor,
                 selected: selected,
               ),
             ],
@@ -822,7 +950,6 @@ class _DifficultyModeTile extends StatelessWidget {
     );
   }
 }
-
 
 class _ReminderPanel extends StatelessWidget {
   const _ReminderPanel({
@@ -869,7 +996,10 @@ class _ReminderPanel extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: GameColors.primary.withValues(alpha: 0.16),
                 ),
-                child: const Icon(Icons.notifications_rounded, color: GameColors.primary),
+                child: const Icon(
+                  Icons.notifications_rounded,
+                  color: GameColors.primary,
+                ),
               ),
               const SizedBox(width: GameSpacing.sm),
               Expanded(
@@ -899,7 +1029,11 @@ class _ReminderPanel extends StatelessWidget {
             padding: const EdgeInsets.all(GameSpacing.sm),
             child: Row(
               children: [
-                const Icon(Icons.today_rounded, color: GameColors.success, size: 20),
+                const Icon(
+                  Icons.today_rounded,
+                  color: GameColors.success,
+                  size: 20,
+                ),
                 const SizedBox(width: GameSpacing.xs),
                 Expanded(
                   child: Text(
@@ -922,8 +1056,12 @@ class _ReminderPanel extends StatelessWidget {
                   label: option.label,
                   icon: Icons.schedule_rounded,
                   color: GameColors.primary,
-                  selected: settings.hour == option.hour && settings.minute == option.minute,
-                  onTap: working ? null : () => onTimeSelected(option.hour, option.minute),
+                  selected:
+                      settings.hour == option.hour &&
+                      settings.minute == option.minute,
+                  onTap: working
+                      ? null
+                      : () => onTimeSelected(option.hour, option.minute),
                 ),
             ],
           ),
@@ -997,7 +1135,8 @@ class _SettingGroup extends StatelessWidget {
               color: color,
               onTap: working ? null : () => onTap(setting),
             ),
-            if (setting != settings.last) const SizedBox(height: GameSpacing.xs),
+            if (setting != settings.last)
+              const SizedBox(height: GameSpacing.xs),
           ],
         ],
       ),
@@ -1044,9 +1183,19 @@ class _SettingTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(setting.label, maxLines: 1, overflow: TextOverflow.ellipsis, style: GameTextStyles.cardTitle),
+                    Text(
+                      setting.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GameTextStyles.cardTitle,
+                    ),
                     const SizedBox(height: 2),
-                    Text(setting.description, maxLines: 2, overflow: TextOverflow.ellipsis, style: GameTextStyles.caption),
+                    Text(
+                      setting.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GameTextStyles.caption,
+                    ),
                   ],
                 ),
               ),
@@ -1056,7 +1205,9 @@ class _SettingTile extends StatelessWidget {
                 children: [
                   Text(
                     setting.shortValue,
-                    style: GameTextStyles.cardTitle.copyWith(color: GameColors.reward),
+                    style: GameTextStyles.cardTitle.copyWith(
+                      color: GameColors.reward,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text('editar', style: GameTextStyles.caption),

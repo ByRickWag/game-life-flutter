@@ -1,7 +1,9 @@
 import 'package:sqflite/sqflite.dart';
 
+import '../app_version.dart';
 import '../database/app_database.dart';
 import '../models/game_models.dart';
+import '../services/difficulty_service.dart';
 import '../services/progression_service.dart';
 import '../utils/id_generator.dart';
 
@@ -123,40 +125,116 @@ class SystemRepository {
     'xp_cap_mission_normal': ['30', 'int', 'XP máximo para missão normal.'],
     'xp_cap_mission_medium': ['40', 'int', 'XP máximo para missão média.'],
     'xp_cap_mission_hard': ['60', 'int', 'XP máximo para missão difícil.'],
-    'xp_cap_mission_very_hard': ['100', 'int', 'XP máximo para missão muito difícil.'],
-    'xp_cap_special_very_hard': ['300', 'int', 'XP máximo para missão especial muito difícil.'],
+    'xp_cap_mission_very_hard': [
+      '100',
+      'int',
+      'XP máximo para missão muito difícil.',
+    ],
+    'xp_cap_special_very_hard': [
+      '300',
+      'int',
+      'XP máximo para missão especial muito difícil.',
+    ],
     'xp_cap_objective_easy': ['20', 'int', 'XP máximo para objetivo fácil.'],
     'xp_cap_objective_normal': ['30', 'int', 'XP máximo para objetivo normal.'],
     'xp_cap_objective_medium': ['40', 'int', 'XP máximo para objetivo médio.'],
     'xp_cap_objective_hard': ['60', 'int', 'XP máximo para objetivo difícil.'],
-    'xp_cap_objective_very_hard': ['300', 'int', 'XP máximo para objetivo muito difícil.'],
+    'xp_cap_objective_very_hard': [
+      '300',
+      'int',
+      'XP máximo para objetivo muito difícil.',
+    ],
     'xp_cap_session': ['150', 'int', 'XP máximo por sessão finalizada.'],
     'project_task_xp_default': ['5', 'int', 'XP padrão por tarefa de projeto.'],
     'project_task_xp_cap': ['10', 'int', 'XP máximo por tarefa de projeto.'],
     'project_completion_xp': ['150', 'int', 'XP padrão ao concluir projeto.'],
-    'project_completion_coins': ['50', 'int', 'Coins padrão ao concluir projeto.'],
-    'xp_daily_easy': ['8', 'int', 'Configuração antiga mantida por compatibilidade.'],
-    'xp_daily_normal': ['12', 'int', 'Configuração antiga mantida por compatibilidade.'],
-    'xp_daily_hard': ['20', 'int', 'Configuração antiga mantida por compatibilidade.'],
-    'xp_weekly_base': ['45', 'int', 'Configuração antiga mantida por compatibilidade.'],
-    'xp_monthly_base': ['140', 'int', 'Configuração antiga mantida por compatibilidade.'],
-    'xp_special_base': ['70', 'int', 'Configuração antiga mantida por compatibilidade.'],
+    'project_completion_coins': [
+      '50',
+      'int',
+      'Coins padrão ao concluir projeto.',
+    ],
+    'xp_daily_easy': [
+      '8',
+      'int',
+      'Configuração antiga mantida por compatibilidade.',
+    ],
+    'xp_daily_normal': [
+      '12',
+      'int',
+      'Configuração antiga mantida por compatibilidade.',
+    ],
+    'xp_daily_hard': [
+      '20',
+      'int',
+      'Configuração antiga mantida por compatibilidade.',
+    ],
+    'xp_weekly_base': [
+      '45',
+      'int',
+      'Configuração antiga mantida por compatibilidade.',
+    ],
+    'xp_monthly_base': [
+      '140',
+      'int',
+      'Configuração antiga mantida por compatibilidade.',
+    ],
+    'xp_special_base': [
+      '70',
+      'int',
+      'Configuração antiga mantida por compatibilidade.',
+    ],
     'coins_easy': ['3', 'int', 'Coins para ação fácil.'],
     'coins_normal': ['5', 'int', 'Coins para ação normal.'],
     'coins_medium': ['7', 'int', 'Coins para ação média.'],
     'coins_hard': ['10', 'int', 'Coins para ação difícil.'],
     'coins_very_hard': ['15', 'int', 'Coins para ação muito difícil.'],
-    'session_xp_per_15min': ['5', 'int', 'XP por bloco de 15 minutos em sessões.'],
-    'objective_completion_multiplier': ['1.0', 'double', 'Multiplicador de recompensa ao concluir objetivo.'],
+    'session_xp_per_15min': [
+      '5',
+      'int',
+      'XP por bloco de 15 minutos em sessões.',
+    ],
+    'objective_completion_multiplier': [
+      '1.0',
+      'double',
+      'Multiplicador de recompensa ao concluir objetivo.',
+    ],
     'habit_xp_default': ['8', 'int', 'XP padrão para hábitos simples.'],
-    'habit_xp_weekly_default': ['12', 'int', 'XP padrão para hábitos semanais.'],
+    'habit_xp_weekly_default': [
+      '12',
+      'int',
+      'XP padrão para hábitos semanais.',
+    ],
     'habit_coin_default': ['0', 'int', 'Coins padrão para hábitos.'],
-    'habit_max_attributes': ['3', 'int', 'Quantidade máxima de atributos por hábito.'],
-    'level_curve_multiplier_normal': ['1.0', 'double', 'Multiplicador da curva de XP no modo Normal.'],
-    'level_curve_multiplier_hard': ['1.25', 'double', 'Multiplicador da curva de XP no modo Difícil.'],
-    'level_curve_multiplier_hardcore': ['1.5', 'double', 'Multiplicador da curva de XP no modo Hardcore.'],
-    'hero_max_level': ['100', 'int', 'Nível máximo do herói nesta fase do app.'],
-    'mission_failure_penalty_enabled': ['true', 'bool', 'Ativa penalidades por falha de missão nos modos Difícil e Hardcore.'],
+    'habit_max_attributes': [
+      '3',
+      'int',
+      'Quantidade máxima de atributos por hábito.',
+    ],
+    'level_curve_multiplier_normal': [
+      '1.0',
+      'double',
+      'Multiplicador da curva de XP no modo Normal.',
+    ],
+    'level_curve_multiplier_hard': [
+      '1.25',
+      'double',
+      'Multiplicador da curva de XP no modo Difícil.',
+    ],
+    'level_curve_multiplier_hardcore': [
+      '1.5',
+      'double',
+      'Multiplicador da curva de XP no modo Hardcore.',
+    ],
+    'hero_max_level': [
+      '100',
+      'int',
+      'Nível máximo do herói nesta fase do app.',
+    ],
+    'mission_failure_penalty_enabled': [
+      'true',
+      'bool',
+      'Ativa penalidades por falha de missão nos modos Difícil e Hardcore.',
+    ],
   };
 
   Future<List<BalanceSetting>> getSettings() async {
@@ -205,21 +283,26 @@ class SystemRepository {
     required BalanceSetting setting,
     required String rawValue,
   }) async {
-    final value = _normalizeValue(rawValue, setting.valueType);
     final db = await AppDatabase.instance.database;
+    if (setting.key == 'active_difficulty_mode') {
+      await DifficultyService(
+        databaseProvider: () async => db,
+      ).setActiveMode(rawValue);
+      return;
+    }
+
+    final value = _normalizeValue(rawValue, setting.valueType);
     final now = DateTime.now().toIso8601String();
 
     await db.update(
       'settings',
-      {
-        'value': value,
-        'updated_at': now,
-      },
+      {'value': value, 'updated_at': now},
       where: 'key = ?',
       whereArgs: [setting.key],
     );
 
-    if (setting.key.startsWith('level_curve_multiplier_') || setting.key == 'hero_max_level') {
+    if (setting.key.startsWith('level_curve_multiplier_') ||
+        setting.key == 'hero_max_level') {
       await ProgressionService.refreshHeroLevel(db, nowIso: now);
     }
   }
@@ -248,10 +331,18 @@ class SystemRepository {
       await txn.delete('habit_logs');
       await txn.delete('shop_purchases');
       await txn.delete('shop_items');
-      await txn.delete('app_meta', where: 'key = ?', whereArgs: ['seed_v310_shop_done']);
+      await txn.delete(
+        'app_meta',
+        where: 'key = ?',
+        whereArgs: ['seed_v310_shop_done'],
+      );
       await txn.delete('vault_entries');
       await txn.delete('vaults');
-      await txn.delete('item_attribute_links', where: 'item_type = ?', whereArgs: ['habit']);
+      await txn.delete(
+        'item_attribute_links',
+        where: 'item_type = ?',
+        whereArgs: ['habit'],
+      );
       await txn.delete('habits');
       await txn.delete('sessions');
       await txn.delete('projects');
@@ -272,15 +363,12 @@ class SystemRepository {
         whereArgs: [1],
       );
 
-      await txn.update(
-        'hero_achievements',
-        {
-          'progress_value': 0,
-          'is_unlocked': 0,
-          'unlocked_at': null,
-          'updated_at': now,
-        },
-      );
+      await txn.update('hero_achievements', {
+        'progress_value': 0,
+        'is_unlocked': 0,
+        'unlocked_at': null,
+        'updated_at': now,
+      });
 
       await txn.update(
         'hero_profiles',
@@ -295,37 +383,24 @@ class SystemRepository {
         whereArgs: ['main_hero'],
       );
 
-      await txn.update(
-        'hero_attributes',
-        {
-          'points': 0,
-          'xp': 0,
-          'updated_at': now,
-        },
-      );
+      await txn.update('hero_attributes', {
+        'points': 0,
+        'xp': 0,
+        'updated_at': now,
+      });
 
-      await txn.update(
-        'hero_areas',
-        {
-          'points': 0,
-          'xp': 0,
-          'updated_at': now,
-        },
-      );
+      await txn.update('hero_areas', {'points': 0, 'xp': 0, 'updated_at': now});
 
-      await txn.insert(
-        'history_events',
-        {
-          'id': IdGenerator.create('history'),
-          'title': 'Dados de teste resetados',
-          'description': 'Missões, hábitos, cofres, loja, objetivos, sessões, projetos e recompensas foram zerados.',
-          'type': 'system',
-          'xp_delta': 0,
-          'coins_delta': 0,
-          'occurred_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      await txn.insert('history_events', {
+        'id': IdGenerator.create('history'),
+        'title': 'Dados de teste resetados',
+        'description':
+            'Missões, hábitos, cofres, loja, objetivos, sessões, projetos e recompensas foram zerados.',
+        'type': 'system',
+        'xp_delta': 0,
+        'coins_delta': 0,
+        'occurred_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
   }
 
@@ -376,7 +451,9 @@ class SystemRepository {
         (SELECT COUNT(*) FROM shop_purchases WHERE type_snapshot = 'real_purchase') AS real_purchases;
     ''');
 
-    final vaultSummary = vaultRows.isEmpty ? <String, Object?>{} : vaultRows.first;
+    final vaultSummary = vaultRows.isEmpty
+        ? <String, Object?>{}
+        : vaultRows.first;
     final campaignProgressRows = await db.rawQuery('''
       SELECT
         COUNT(*) AS total_milestones,
@@ -387,18 +464,29 @@ class SystemRepository {
     ''');
 
     final shopSummary = shopRows.isEmpty ? <String, Object?>{} : shopRows.first;
-    final campaignProgress = campaignProgressRows.isEmpty ? <String, Object?>{} : campaignProgressRows.first;
+    final campaignProgress = campaignProgressRows.isEmpty
+        ? <String, Object?>{}
+        : campaignProgressRows.first;
     final hero = heroRows.isEmpty ? <String, Object?>{} : heroRows.first;
-    final campaign = campaignRows.isEmpty ? <String, Object?>{} : campaignRows.first;
+    final campaign = campaignRows.isEmpty
+        ? <String, Object?>{}
+        : campaignRows.first;
     final buffer = StringBuffer();
 
     buffer.writeln('GAME LIFE — RELATÓRIO SIMPLES');
+    buffer.writeln('Versão do app: ${AppVersion.display}');
     buffer.writeln('Gerado em: ${DateTime.now().toLocal()}');
     buffer.writeln('');
     buffer.writeln('CAMPANHA');
-    buffer.writeln('- ${readString(campaign, 'title', fallback: 'Sem campanha ativa')}');
-    buffer.writeln('- Progresso médio: ${readInt(campaignProgress, 'progress_percent')}%');
-    buffer.writeln('- Marcos concluídos: ${readInt(campaignProgress, 'completed_milestones')}/${readInt(campaignProgress, 'total_milestones')}');
+    buffer.writeln(
+      '- ${readString(campaign, 'title', fallback: 'Sem campanha ativa')}',
+    );
+    buffer.writeln(
+      '- Progresso médio: ${readInt(campaignProgress, 'progress_percent')}%',
+    );
+    buffer.writeln(
+      '- Marcos concluídos: ${readInt(campaignProgress, 'completed_milestones')}/${readInt(campaignProgress, 'total_milestones')}',
+    );
     buffer.writeln('');
     buffer.writeln('HERÓI');
     buffer.writeln('- Nome: ${readString(hero, 'name', fallback: 'Herói')}');
@@ -418,24 +506,38 @@ class SystemRepository {
     buffer.writeln('- Coins no histórico: ${stats.totalCoinsHistory}');
     buffer.writeln('');
     buffer.writeln('COFRE DO REINO');
-    buffer.writeln('- Cofres ativos: ${readInt(vaultSummary, 'active_vaults')}');
-    buffer.writeln('- Saldo guardado: ${formatCurrency(readDouble(vaultSummary, 'total_balance'))}');
-    buffer.writeln('- Metas declaradas: ${formatCurrency(readDouble(vaultSummary, 'total_goals'))}');
+    buffer.writeln(
+      '- Cofres ativos: ${readInt(vaultSummary, 'active_vaults')}',
+    );
+    buffer.writeln(
+      '- Saldo guardado: ${formatCurrency(readDouble(vaultSummary, 'total_balance'))}',
+    );
+    buffer.writeln(
+      '- Metas declaradas: ${formatCurrency(readDouble(vaultSummary, 'total_goals'))}',
+    );
     buffer.writeln('');
     buffer.writeln('LOJA DO REINO');
     buffer.writeln('- Itens ativos: ${readInt(shopSummary, 'active_items')}');
-    buffer.writeln('- Compras realizadas: ${readInt(shopSummary, 'purchases')}');
+    buffer.writeln(
+      '- Compras realizadas: ${readInt(shopSummary, 'purchases')}',
+    );
     buffer.writeln('- Coins gastos: ${readInt(shopSummary, 'coins_spent')}');
-    buffer.writeln('- Compras reais liberadas: ${readInt(shopSummary, 'real_purchases')}');
+    buffer.writeln(
+      '- Compras reais liberadas: ${readInt(shopSummary, 'real_purchases')}',
+    );
     buffer.writeln('');
     buffer.writeln('ATRIBUTOS');
     for (final row in attributeRows) {
-      buffer.writeln('- ${readString(row, 'name')}: ${readInt(row, 'points')} pts / ${readInt(row, 'xp')} XP');
+      buffer.writeln(
+        '- ${readString(row, 'name')}: ${readInt(row, 'points')} pts / ${readInt(row, 'xp')} XP',
+      );
     }
     buffer.writeln('');
     buffer.writeln('ÁREAS DA VIDA');
     for (final row in areaRows) {
-      buffer.writeln('- ${readString(row, 'name')}: ${readInt(row, 'points')} pts / ${readInt(row, 'xp')} XP');
+      buffer.writeln(
+        '- ${readString(row, 'name')}: ${readInt(row, 'points')} pts / ${readInt(row, 'xp')} XP',
+      );
     }
     buffer.writeln('');
     buffer.writeln('BALANCEAMENTO LITE');
@@ -445,7 +547,9 @@ class SystemRepository {
     buffer.writeln('');
     buffer.writeln('HISTÓRICO RECENTE');
     for (final row in recentHistoryRows) {
-      buffer.writeln('- ${readString(row, 'title')} | XP ${readInt(row, 'xp_delta')} | Coins ${readInt(row, 'coins_delta')}');
+      buffer.writeln(
+        '- ${readString(row, 'title')} | XP ${readInt(row, 'xp_delta')} | Coins ${readInt(row, 'coins_delta')}',
+      );
     }
     buffer.writeln('');
     buffer.writeln('BANCO LOCAL');
@@ -462,17 +566,13 @@ class SystemRepository {
 
     for (final entry in defaultSettings.entries) {
       final values = entry.value;
-      await db.insert(
-        'settings',
-        {
-          'key': entry.key,
-          'value': values[0],
-          'value_type': values[1],
-          'description': values[2],
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await db.insert('settings', {
+        'key': entry.key,
+        'value': values[0],
+        'value_type': values[1],
+        'description': values[2],
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
       if (forceDefaults) {
         await db.update(
@@ -526,18 +626,14 @@ class SystemRepository {
     required String title,
     required String description,
   }) async {
-    await db.insert(
-      'history_events',
-      {
-        'id': IdGenerator.create('history'),
-        'title': title,
-        'description': description,
-        'type': 'system',
-        'xp_delta': 0,
-        'coins_delta': 0,
-        'occurred_at': DateTime.now().toIso8601String(),
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.insert('history_events', {
+      'id': IdGenerator.create('history'),
+      'title': title,
+      'description': description,
+      'type': 'system',
+      'xp_delta': 0,
+      'coins_delta': 0,
+      'occurred_at': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 }

@@ -71,8 +71,10 @@ class CampaignScreen extends StatefulWidget {
 }
 
 class _CampaignScreenState extends State<CampaignScreen> {
-  final CampaignCommitmentRepository _repository = CampaignCommitmentRepository();
-  late Future<CampaignCommitmentSummary?> _future;
+  final CampaignCommitmentRepository _repository =
+      CampaignCommitmentRepository();
+  late Future<CampaignCommitmentSummary> _future;
+  bool _syncing = false;
 
   @override
   void initState() {
@@ -80,53 +82,93 @@ class _CampaignScreenState extends State<CampaignScreen> {
     _future = _repository.getActiveCampaignSummary();
   }
 
-  void _reload() {
+  Future<void> _reload({bool rethrowError = false}) async {
+    final nextLoad = _repository.getActiveCampaignSummary();
+    if (!mounted) return;
     setState(() {
-      _future = _repository.getActiveCampaignSummary();
+      _future = nextLoad;
     });
+
+    try {
+      await nextLoad;
+    } catch (error, stackTrace) {
+      debugPrint('Falha ao carregar a campanha: $error\n$stackTrace');
+      // O FutureBuilder abaixo apresenta o erro e mantém a ação de tentar novamente.
+      if (rethrowError) Error.throwWithStackTrace(error, stackTrace);
+    }
   }
 
   Future<void> _syncCampaignProgress() async {
-    await _repository.syncAutomaticProgress();
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Campanha sincronizada com suas ações reais.')),
-    );
-    _reload();
-  }
+    if (_syncing) return;
+    setState(() => _syncing = true);
 
-  Future<void> _toggleManualChapter(CampaignMilestone chapter) async {
-    if (chapter.autoProgressEnabled && chapter.automationKey.trim().isNotEmpty) {
-      return;
+    try {
+      await _repository.syncAutomaticProgress();
+      if (!mounted) return;
+      await _reload(rethrowError: true);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Campanha sincronizada com suas ações reais.'),
+        ),
+      );
+    } catch (error, stackTrace) {
+      debugPrint('Falha ao sincronizar a campanha: $error\n$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Não foi possível sincronizar a campanha agora. '
+            'Tente novamente. Detalhes: $error',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _syncing = false);
     }
-
-    if (chapter.isCompleted) {
-      await _repository.reopenMilestone(chapter.id);
-    } else {
-      await _repository.completeMilestone(chapter.id);
-    }
-
-    if (mounted) _reload();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<CampaignCommitmentSummary?>(
+    return FutureBuilder<CampaignCommitmentSummary>(
       future: _future,
       builder: (context, snapshot) {
         final loading = snapshot.connectionState == ConnectionState.waiting;
+        if (snapshot.hasError && !loading) {
+          final errorDetails = snapshot.error.toString();
+          return SafeArea(
+            child: RefreshIndicator(
+              onRefresh: () => _reload(),
+              child: SingleChildScrollView(
+                padding: GameSpacing.screen,
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: GameEmptyState(
+                  icon: Icons.error_outline_rounded,
+                  title: 'Não foi possível carregar a campanha',
+                  message:
+                      'Seus dados continuam salvos no dispositivo. Tente '
+                      'carregar a campanha novamente. Detalhes: $errorDetails',
+                  actionLabel: 'Tentar novamente',
+                  onAction: () => _reload(),
+                ),
+              ),
+            ),
+          );
+        }
+
         final summary = snapshot.data;
         final campaign = summary?.campaign;
         final chapters = summary?.milestones ?? const <CampaignMilestone>[];
         final currentChapter = _currentChapter(chapters);
         final title = campaign?.title ?? 'Transformação 20–25';
-        final description = campaign?.description ??
+        final description =
+            campaign?.description ??
             'Campanha principal de evolução pessoal do Game Life.';
         final progress = summary?.progressPercent ?? 0;
 
         return SafeArea(
           child: RefreshIndicator(
-            onRefresh: () async => _reload(),
+            onRefresh: () => _reload(),
             child: SingleChildScrollView(
               padding: GameSpacing.screen,
               physics: const AlwaysScrollableScrollPhysics(),
@@ -142,9 +184,13 @@ class _CampaignScreenState extends State<CampaignScreen> {
                   ),
                   const SizedBox(height: GameSpacing.md),
                   GameSecondaryButton(
-                    label: 'Sincronizar progresso automático',
+                    label: _syncing
+                        ? 'Sincronizando campanha...'
+                        : 'Sincronizar progresso automático',
                     icon: Icons.sync_rounded,
-                    onPressed: summary == null ? null : _syncCampaignProgress,
+                    onPressed: summary == null || _syncing
+                        ? null
+                        : _syncCampaignProgress,
                   ),
                   const SizedBox(height: GameSpacing.lg),
                   if (loading)
@@ -166,7 +212,7 @@ class _CampaignScreenState extends State<CampaignScreen> {
                     GameSectionHeader(
                       title: 'Mapa de capítulos',
                       subtitle: chapters.isEmpty
-                          ? 'A campanha ainda não tem capítulos configurados.'
+                          ? 'Os capítulos padrão ainda não estão disponíveis.'
                           : '${summary?.completedMilestones ?? 0}/${summary?.totalMilestones ?? 0} capítulos concluídos.',
                       icon: Icons.auto_stories_rounded,
                     ),
@@ -176,14 +222,11 @@ class _CampaignScreenState extends State<CampaignScreen> {
                         icon: Icons.route_outlined,
                         title: 'Nenhum capítulo encontrado',
                         message:
-                            'Use a configuração de campanha para criar capítulos e dividir sua jornada em fases reais.',
+                            'Puxe a tela para atualizar ou tente novamente em alguns instantes.',
                       )
                     else
                       for (final chapter in chapters) ...[
-                        _ChapterTimelineCard(
-                          chapter: chapter,
-                          onToggle: () => _toggleManualChapter(chapter),
-                        ),
+                        _ChapterTimelineCard(chapter: chapter),
                         const SizedBox(height: GameSpacing.sm),
                       ],
                     const SizedBox(height: GameSpacing.lg),
@@ -251,7 +294,11 @@ class _CampaignHeroCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: GameSpacing.md),
-          GameProgressBar(value: progress, color: GameColors.faith, showGlow: true),
+          GameProgressBar(
+            value: progress,
+            color: GameColors.faith,
+            showGlow: true,
+          ),
           const SizedBox(height: GameSpacing.xs),
           Text(
             '${(progress * 100).round()}% da campanha • $victoryStatus',
@@ -302,13 +349,15 @@ class _CurrentChapterCard extends StatelessWidget {
       return const GameCard(
         backgroundColor: GameColors.surfaceSoft,
         child: Text(
-          'Nenhum capítulo ativo no momento. Crie capítulos para transformar a campanha em uma trilha cronológica.',
+          'Nenhum capítulo ativo está disponível. Atualize a campanha para carregar a trilha novamente.',
           style: GameTextStyles.body,
         ),
       );
     }
 
-    final area = _areaOptionById(_validAreaId(current.primaryAreaId) ?? 'body_health');
+    final area = _areaOptionById(
+      _validAreaId(current.primaryAreaId) ?? 'body_health',
+    );
     final progressPercent = (current.progress * 100).round();
 
     return GameCard(
@@ -347,7 +396,11 @@ class _CurrentChapterCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: GameSpacing.sm),
-          GameProgressBar(value: current.progress, color: area.color, showGlow: true),
+          GameProgressBar(
+            value: current.progress,
+            color: area.color,
+            showGlow: true,
+          ),
           const SizedBox(height: GameSpacing.sm),
           Text(_chapterWindow(current), style: GameTextStyles.caption),
           if (current.description.trim().isNotEmpty) ...[
@@ -411,13 +464,18 @@ class _CampaignNarrativeCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: GameSpacing.sm),
-              Expanded(child: Text('Declaração da jornada', style: GameTextStyles.cardTitle)),
+              Expanded(
+                child: Text(
+                  'Declaração da jornada',
+                  style: GameTextStyles.cardTitle,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: GameSpacing.sm),
           Text(
             goal.isEmpty
-                ? 'Defina um objetivo principal para que a campanha tenha um norte claro.'
+                ? 'Objetivo principal ainda não informado para esta campanha.'
                 : goal,
             style: GameTextStyles.body,
           ),
@@ -462,7 +520,12 @@ class _VictoryCriteriaCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: GameSpacing.sm),
-              Expanded(child: Text('Critérios de vitória', style: GameTextStyles.cardTitle)),
+              Expanded(
+                child: Text(
+                  'Critérios de vitória',
+                  style: GameTextStyles.cardTitle,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: GameSpacing.sm),
@@ -512,7 +575,10 @@ class _CampaignSignalsCard extends StatelessWidget {
     if (data == null) {
       return const GameCard(
         backgroundColor: GameColors.surfaceSoft,
-        child: Text('Sinais da campanha ainda não carregados.', style: GameTextStyles.caption),
+        child: Text(
+          'Sinais da campanha ainda não carregados.',
+          style: GameTextStyles.caption,
+        ),
       );
     }
 
@@ -521,7 +587,8 @@ class _CampaignSignalsCard extends StatelessWidget {
       children: [
         const GameSectionHeader(
           title: 'Sinais que alimentam a campanha',
-          subtitle: 'A campanha evolui lendo suas ações reais registradas no app.',
+          subtitle:
+              'A campanha evolui lendo suas ações reais registradas no app.',
           icon: Icons.auto_graph_rounded,
         ),
         const SizedBox(height: GameSpacing.sm),
@@ -529,15 +596,60 @@ class _CampaignSignalsCard extends StatelessWidget {
           spacing: GameSpacing.xs,
           runSpacing: GameSpacing.xs,
           children: [
-            GameChip(label: '${data.missionsCompleted} missões', icon: Icons.flag_rounded, color: GameColors.primary, selected: true),
-            GameChip(label: '${data.habitRewards} hábitos', icon: Icons.repeat_rounded, color: GameColors.vigor, selected: true),
-            GameChip(label: '${data.waterDays} dias com água', icon: Icons.water_drop_rounded, color: GameColors.info, selected: true),
-            GameChip(label: '${data.focusHours}h foco', icon: Icons.timer_rounded, color: GameColors.success, selected: true),
-            GameChip(label: '${data.objectivesCompleted} objetivos', icon: Icons.track_changes_rounded, color: GameColors.clarity, selected: true),
-            GameChip(label: '${data.projectTasksCompleted} tarefas', icon: Icons.checklist_rounded, color: GameColors.reward, selected: true),
-            GameChip(label: '${data.achievementsUnlocked} conquistas', icon: Icons.emoji_events_rounded, color: GameColors.reward, selected: true),
-            GameChip(label: '${data.totalAreaXp} XP em áreas', icon: Icons.hub_rounded, color: GameColors.faith, selected: true),
-            GameChip(label: 'R\$ ${data.vaultSaved}', icon: Icons.savings_rounded, color: GameColors.responsibility, selected: true),
+            GameChip(
+              label: '${data.missionsCompleted} missões',
+              icon: Icons.flag_rounded,
+              color: GameColors.primary,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.habitRewards} hábitos',
+              icon: Icons.repeat_rounded,
+              color: GameColors.vigor,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.waterDays} dias com água',
+              icon: Icons.water_drop_rounded,
+              color: GameColors.info,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.focusHours}h foco',
+              icon: Icons.timer_rounded,
+              color: GameColors.success,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.objectivesCompleted} objetivos',
+              icon: Icons.track_changes_rounded,
+              color: GameColors.clarity,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.projectTasksCompleted} tarefas',
+              icon: Icons.checklist_rounded,
+              color: GameColors.reward,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.achievementsUnlocked} conquistas',
+              icon: Icons.emoji_events_rounded,
+              color: GameColors.reward,
+              selected: true,
+            ),
+            GameChip(
+              label: '${data.totalAreaXp} XP em áreas',
+              icon: Icons.hub_rounded,
+              color: GameColors.faith,
+              selected: true,
+            ),
+            GameChip(
+              label: 'R\$ ${data.vaultSaved}',
+              icon: Icons.savings_rounded,
+              color: GameColors.responsibility,
+              selected: true,
+            ),
           ],
         ),
       ],
@@ -546,17 +658,19 @@ class _CampaignSignalsCard extends StatelessWidget {
 }
 
 class _ChapterTimelineCard extends StatelessWidget {
-  const _ChapterTimelineCard({required this.chapter, required this.onToggle});
+  const _ChapterTimelineCard({required this.chapter});
 
   final CampaignMilestone chapter;
-  final VoidCallback onToggle;
 
   @override
   Widget build(BuildContext context) {
-    final area = _areaOptionById(_validAreaId(chapter.primaryAreaId) ?? 'body_health');
+    final area = _areaOptionById(
+      _validAreaId(chapter.primaryAreaId) ?? 'body_health',
+    );
     final color = chapter.isCompleted ? GameColors.success : area.color;
     final percent = (chapter.progress * 100).round();
-    final isAutomatic = chapter.autoProgressEnabled && chapter.automationKey.trim().isNotEmpty;
+    final isAutomatic =
+        chapter.autoProgressEnabled && chapter.automationKey.trim().isNotEmpty;
 
     return GameCard(
       padding: const EdgeInsets.all(GameSpacing.md),
@@ -585,7 +699,12 @@ class _ChapterTimelineCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(chapter.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: GameTextStyles.cardTitle),
+                    Text(
+                      chapter.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GameTextStyles.cardTitle,
+                    ),
                     const SizedBox(height: 2),
                     Text(_chapterMeta(chapter), style: GameTextStyles.caption),
                   ],
@@ -602,7 +721,11 @@ class _ChapterTimelineCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: GameSpacing.sm),
-          GameProgressBar(value: chapter.progress, color: color, showGlow: chapter.isCompleted),
+          GameProgressBar(
+            value: chapter.progress,
+            color: color,
+            showGlow: chapter.isCompleted,
+          ),
           if (chapter.description.trim().isNotEmpty) ...[
             const SizedBox(height: GameSpacing.sm),
             Text(chapter.description, style: GameTextStyles.body),
@@ -620,32 +743,37 @@ class _ChapterTimelineCard extends StatelessWidget {
             spacing: GameSpacing.xs,
             runSpacing: GameSpacing.xs,
             children: [
-              GameChip(label: 'Foco: ${area.label}', icon: area.icon, color: area.color, selected: true),
+              GameChip(
+                label: 'Foco: ${area.label}',
+                icon: area.icon,
+                color: area.color,
+                selected: true,
+              ),
               if (chapter.secondaryAreaIdList.isNotEmpty)
                 GameChip(
-                  label: 'Apoio: ${_areaListLabel(chapter.secondaryAreaIdList)}',
+                  label:
+                      'Apoio: ${_areaListLabel(chapter.secondaryAreaIdList)}',
                   icon: Icons.account_tree_rounded,
                   color: GameColors.info,
                   selected: true,
                 ),
               if (isAutomatic)
-                const GameChip(label: 'Automático', icon: Icons.auto_awesome_rounded, color: GameColors.info, selected: true),
+                const GameChip(
+                  label: 'Automático',
+                  icon: Icons.auto_awesome_rounded,
+                  color: GameColors.info,
+                  selected: true,
+                ),
               GameChip(
                 label: chapter.isCompleted ? 'Concluído' : 'Ativo',
-                icon: chapter.isCompleted ? Icons.check_rounded : Icons.hourglass_bottom_rounded,
+                icon: chapter.isCompleted
+                    ? Icons.check_rounded
+                    : Icons.hourglass_bottom_rounded,
                 color: color,
                 selected: true,
               ),
             ],
           ),
-          if (!isAutomatic) ...[
-            const SizedBox(height: GameSpacing.sm),
-            GameSecondaryButton(
-              label: chapter.isCompleted ? 'Reabrir capítulo' : 'Concluir capítulo',
-              icon: chapter.isCompleted ? Icons.undo_rounded : Icons.check_circle_rounded,
-              onPressed: onToggle,
-            ),
-          ],
         ],
       ),
     );
@@ -734,7 +862,9 @@ String _areaListLabel(List<String> ids) {
 
 String _chapterWindow(CampaignMilestone chapter) {
   final start = _dateText(chapter.startDate);
-  final end = _dateText(chapter.endDate.isNotEmpty ? chapter.endDate : chapter.targetDate);
+  final end = _dateText(
+    chapter.endDate.isNotEmpty ? chapter.endDate : chapter.targetDate,
+  );
   return '$start até $end';
 }
 
