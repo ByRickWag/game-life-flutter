@@ -234,15 +234,21 @@ class DbSchema {
     await _upgradeToV13(db);
     await _upgradeToV14(db);
     await _upgradeToV15(db);
+    await _upgradeToV16(db);
   }
 
-  static Future<void> upgrade(Database db, int oldVersion, int newVersion) async {
+  static Future<void> upgrade(
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     if (oldVersion < 2) {
       await _addColumnIfMissing(
         db: db,
         tableName: 'sessions',
         columnName: 'session_type',
-        sql: "ALTER TABLE sessions ADD COLUMN session_type TEXT NOT NULL DEFAULT 'general';",
+        sql:
+            "ALTER TABLE sessions ADD COLUMN session_type TEXT NOT NULL DEFAULT 'general';",
       );
     }
 
@@ -257,7 +263,8 @@ class DbSchema {
         db: db,
         tableName: 'projects',
         columnName: 'difficulty',
-        sql: "ALTER TABLE projects ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'normal';",
+        sql:
+            "ALTER TABLE projects ADD COLUMN difficulty TEXT NOT NULL DEFAULT 'normal';",
       );
       await _addColumnIfMissing(
         db: db,
@@ -325,8 +332,11 @@ class DbSchema {
     if (oldVersion < 15) {
       await _upgradeToV15(db);
     }
-  }
 
+    if (oldVersion < 16) {
+      await _upgradeToV16(db);
+    }
+  }
 
   static Future<void> _upgradeToV4(Database db) async {
     await _addColumnIfMissing(
@@ -345,38 +355,44 @@ class DbSchema {
       db: db,
       tableName: 'campaigns',
       columnName: 'victory_minimum_percent',
-      sql: 'ALTER TABLE campaigns ADD COLUMN victory_minimum_percent INTEGER NOT NULL DEFAULT 60;',
+      sql:
+          'ALTER TABLE campaigns ADD COLUMN victory_minimum_percent INTEGER NOT NULL DEFAULT 60;',
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'campaigns',
       columnName: 'victory_good_percent',
-      sql: 'ALTER TABLE campaigns ADD COLUMN victory_good_percent INTEGER NOT NULL DEFAULT 75;',
+      sql:
+          'ALTER TABLE campaigns ADD COLUMN victory_good_percent INTEGER NOT NULL DEFAULT 75;',
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'campaigns',
       columnName: 'victory_excellent_percent',
-      sql: 'ALTER TABLE campaigns ADD COLUMN victory_excellent_percent INTEGER NOT NULL DEFAULT 90;',
+      sql:
+          'ALTER TABLE campaigns ADD COLUMN victory_excellent_percent INTEGER NOT NULL DEFAULT 90;',
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'campaigns',
       columnName: 'difficulty_mode',
-      sql: "ALTER TABLE campaigns ADD COLUMN difficulty_mode TEXT NOT NULL DEFAULT 'normal';",
+      sql:
+          "ALTER TABLE campaigns ADD COLUMN difficulty_mode TEXT NOT NULL DEFAULT 'normal';",
     );
 
     await _addColumnIfMissing(
       db: db,
       tableName: 'missions',
       columnName: 'status',
-      sql: "ALTER TABLE missions ADD COLUMN status TEXT NOT NULL DEFAULT 'active';",
+      sql:
+          "ALTER TABLE missions ADD COLUMN status TEXT NOT NULL DEFAULT 'active';",
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'missions',
       columnName: 'is_compound',
-      sql: 'ALTER TABLE missions ADD COLUMN is_compound INTEGER NOT NULL DEFAULT 0;',
+      sql:
+          'ALTER TABLE missions ADD COLUMN is_compound INTEGER NOT NULL DEFAULT 0;',
     );
     await _addColumnIfMissing(
       db: db,
@@ -394,7 +410,8 @@ class DbSchema {
       db: db,
       tableName: 'missions',
       columnName: 'failure_penalty_applied',
-      sql: 'ALTER TABLE missions ADD COLUMN failure_penalty_applied INTEGER NOT NULL DEFAULT 0;',
+      sql:
+          'ALTER TABLE missions ADD COLUMN failure_penalty_applied INTEGER NOT NULL DEFAULT 0;',
     );
     await _addColumnIfMissing(
       db: db,
@@ -420,13 +437,15 @@ class DbSchema {
       db: db,
       tableName: 'sessions',
       columnName: 'timer_status',
-      sql: "ALTER TABLE sessions ADD COLUMN timer_status TEXT NOT NULL DEFAULT 'manual';",
+      sql:
+          "ALTER TABLE sessions ADD COLUMN timer_status TEXT NOT NULL DEFAULT 'manual';",
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'sessions',
       columnName: 'elapsed_seconds',
-      sql: 'ALTER TABLE sessions ADD COLUMN elapsed_seconds INTEGER NOT NULL DEFAULT 0;',
+      sql:
+          'ALTER TABLE sessions ADD COLUMN elapsed_seconds INTEGER NOT NULL DEFAULT 0;',
     );
 
     await db.execute('''
@@ -451,6 +470,11 @@ class DbSchema {
         description TEXT,
         lore TEXT,
         target_date TEXT,
+        start_date TEXT DEFAULT '',
+        end_date TEXT DEFAULT '',
+        primary_area_id TEXT DEFAULT '',
+        secondary_area_ids TEXT NOT NULL DEFAULT '',
+        chapter_kind TEXT NOT NULL DEFAULT 'chapter',
         sort_order INTEGER NOT NULL DEFAULT 0,
         status TEXT NOT NULL DEFAULT 'active',
         progress REAL NOT NULL DEFAULT 0,
@@ -568,7 +592,6 @@ class DbSchema {
     ''');
   }
 
-
   static Future<void> _upgradeToV5(Database db) async {
     await db.execute("""
       CREATE TABLE IF NOT EXISTS project_milestones (
@@ -595,13 +618,15 @@ class DbSchema {
       db: db,
       tableName: 'project_tasks',
       columnName: 'xp_reward',
-      sql: 'ALTER TABLE project_tasks ADD COLUMN xp_reward INTEGER NOT NULL DEFAULT 5;',
+      sql:
+          'ALTER TABLE project_tasks ADD COLUMN xp_reward INTEGER NOT NULL DEFAULT 5;',
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'project_tasks',
       columnName: 'xp_applied',
-      sql: 'ALTER TABLE project_tasks ADD COLUMN xp_applied INTEGER NOT NULL DEFAULT 0;',
+      sql:
+          'ALTER TABLE project_tasks ADD COLUMN xp_applied INTEGER NOT NULL DEFAULT 0;',
     );
     await _addColumnIfMissing(
       db: db,
@@ -619,7 +644,6 @@ class DbSchema {
     await _seedProjectDefaults(db);
   }
 
-
   static Future<void> _upgradeToV6(Database db) async {
     await db.execute('''
       UPDATE missions
@@ -632,7 +656,6 @@ class DbSchema {
       AND is_compound = 0;
     ''');
   }
-
 
   static Future<void> _upgradeToV7(Database db) async {
     await db.execute('''
@@ -694,20 +717,20 @@ class DbSchema {
     ''');
   }
 
-
-
   static Future<void> _upgradeToV8(Database db) async {
     await _addColumnIfMissing(
       db: db,
       tableName: 'habits',
       columnName: 'health_kind',
-      sql: "ALTER TABLE habits ADD COLUMN health_kind TEXT NOT NULL DEFAULT '';",
+      sql:
+          "ALTER TABLE habits ADD COLUMN health_kind TEXT NOT NULL DEFAULT '';",
     );
     await _addColumnIfMissing(
       db: db,
       tableName: 'habits',
       columnName: 'health_category',
-      sql: "ALTER TABLE habits ADD COLUMN health_category TEXT NOT NULL DEFAULT '';",
+      sql:
+          "ALTER TABLE habits ADD COLUMN health_category TEXT NOT NULL DEFAULT '';",
     );
 
     await db.execute('''
@@ -754,7 +777,6 @@ class DbSchema {
       ON habits(health_kind, health_category, is_active);
     ''');
   }
-
 
   static Future<void> _upgradeToV9(Database db) async {
     final now = DateTime.now().toIso8601String();
@@ -803,30 +825,22 @@ class DbSchema {
     };
 
     for (final entry in settings.entries) {
-      await db.insert(
-        'settings',
-        {
-          'key': entry.key,
-          'value': entry.value[0],
-          'value_type': entry.value[1],
-          'description': entry.value[2],
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+      await db.insert('settings', {
+        'key': entry.key,
+        'value': entry.value[0],
+        'value_type': entry.value[1],
+        'description': entry.value[2],
+        'updated_at': now,
+      }, conflictAlgorithm: ConflictAlgorithm.ignore);
     }
 
     await db.update(
       'settings',
-      {
-        'value': 'true',
-        'updated_at': now,
-      },
+      {'value': 'true', 'updated_at': now},
       where: 'key = ?',
       whereArgs: ['mission_failure_penalty_enabled'],
     );
   }
-
 
   static Future<void> _upgradeToV10(Database db) async {
     await db.execute('''
@@ -884,7 +898,6 @@ class DbSchema {
     ''');
   }
 
-
   static Future<void> _upgradeToV12(Database db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS shop_items (
@@ -932,7 +945,6 @@ class DbSchema {
     ''');
   }
 
-
   static Future<void> _upgradeToV13(Database db) async {
     await _addColumnIfMissing(
       db: db,
@@ -944,7 +956,8 @@ class DbSchema {
       db: db,
       tableName: 'campaign_milestones',
       columnName: 'auto_progress_enabled',
-      sql: 'ALTER TABLE campaign_milestones ADD COLUMN auto_progress_enabled INTEGER NOT NULL DEFAULT 1;',
+      sql:
+          'ALTER TABLE campaign_milestones ADD COLUMN auto_progress_enabled INTEGER NOT NULL DEFAULT 1;',
     );
     await _addColumnIfMissing(
       db: db,
@@ -959,14 +972,12 @@ class DbSchema {
     ''');
   }
 
-
   static Future<void> _upgradeToV14(Database db) async {
     await db.execute('''
       CREATE INDEX IF NOT EXISTS idx_settings_onboarding
       ON settings(key, updated_at);
     ''');
   }
-
 
   static Future<void> _upgradeToV15(Database db) async {
     final now = DateTime.now().toIso8601String();
@@ -988,13 +999,58 @@ class DbSchema {
       ON hero_areas(area_id, xp, points);
     """);
 
-    await db.execute("""
+    await db.execute(
+      """
       INSERT OR IGNORE INTO hero_areas (id, area_id, points, xp, created_at, updated_at)
       SELECT 'hero_area_' || areas.id, areas.id, 0, 0, ?, ?
       FROM areas;
-    """, [now, now]);
+    """,
+      [now, now],
+    );
   }
 
+  static Future<void> _upgradeToV16(Database db) async {
+    await _addColumnIfMissing(
+      db: db,
+      tableName: 'campaign_milestones',
+      columnName: 'start_date',
+      sql:
+          "ALTER TABLE campaign_milestones ADD COLUMN start_date TEXT DEFAULT '';",
+    );
+    await _addColumnIfMissing(
+      db: db,
+      tableName: 'campaign_milestones',
+      columnName: 'end_date',
+      sql:
+          "ALTER TABLE campaign_milestones ADD COLUMN end_date TEXT DEFAULT '';",
+    );
+    await _addColumnIfMissing(
+      db: db,
+      tableName: 'campaign_milestones',
+      columnName: 'primary_area_id',
+      sql:
+          "ALTER TABLE campaign_milestones ADD COLUMN primary_area_id TEXT DEFAULT '';",
+    );
+    await _addColumnIfMissing(
+      db: db,
+      tableName: 'campaign_milestones',
+      columnName: 'secondary_area_ids',
+      sql:
+          "ALTER TABLE campaign_milestones ADD COLUMN secondary_area_ids TEXT NOT NULL DEFAULT '';",
+    );
+    await _addColumnIfMissing(
+      db: db,
+      tableName: 'campaign_milestones',
+      columnName: 'chapter_kind',
+      sql:
+          "ALTER TABLE campaign_milestones ADD COLUMN chapter_kind TEXT NOT NULL DEFAULT 'chapter';",
+    );
+
+    await db.execute('''
+      CREATE INDEX IF NOT EXISTS idx_campaign_chapters_area
+      ON campaign_milestones(campaign_id, primary_area_id, start_date, end_date);
+    ''');
+  }
 
   static Future<void> _seedProjectDefaults(Database db) async {
     final now = DateTime.now().toIso8601String();
@@ -1014,21 +1070,18 @@ class DbSchema {
       var milestoneId = '';
       if (milestoneRows.isEmpty) {
         milestoneId = 'milestone_${projectId}_base';
-        await db.insert(
-          'project_milestones',
-          {
-            'id': milestoneId,
-            'project_id': projectId,
-            'title': 'Marco inicial',
-            'description': 'Marco criado automaticamente para tarefas antigas do projeto.',
-            'status': 'active',
-            'sort_order': 0,
-            'completed_at': null,
-            'created_at': now,
-            'updated_at': now,
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await db.insert('project_milestones', {
+          'id': milestoneId,
+          'project_id': projectId,
+          'title': 'Marco inicial',
+          'description':
+              'Marco criado automaticamente para tarefas antigas do projeto.',
+          'status': 'active',
+          'sort_order': 0,
+          'completed_at': null,
+          'created_at': now,
+          'updated_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       } else {
         milestoneId = milestoneRows.first['id']?.toString() ?? '';
       }
@@ -1056,5 +1109,4 @@ class DbSchema {
       await db.execute(sql);
     }
   }
-
 }

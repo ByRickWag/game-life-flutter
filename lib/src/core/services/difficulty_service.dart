@@ -21,6 +21,43 @@ class DifficultyPenaltyPreview {
   final int xpPenalty;
 }
 
+class HardcoreEligibility {
+  const HardcoreEligibility({
+    required this.validCheckIns,
+    required this.requiredCheckIns,
+  });
+
+  final int validCheckIns;
+  final int requiredCheckIns;
+
+  bool get isUnlocked => validCheckIns >= requiredCheckIns;
+
+  int get remainingCheckIns {
+    final remaining = requiredCheckIns - validCheckIns;
+    return remaining > 0 ? remaining : 0;
+  }
+
+  double get progress {
+    if (requiredCheckIns <= 0) return 1;
+    return (validCheckIns / requiredCheckIns).clamp(0.0, 1.0).toDouble();
+  }
+
+  String get progressLabel =>
+      '$validCheckIns de $requiredCheckIns check-ins v\u00e1lidos';
+}
+
+class HardcoreLockedException implements Exception {
+  const HardcoreLockedException(this.eligibility);
+
+  final HardcoreEligibility eligibility;
+
+  @override
+  String toString() {
+    return 'Hardcore exige ${eligibility.requiredCheckIns} check-ins v\u00e1lidos. '
+        'Progresso atual: ${eligibility.progressLabel}.';
+  }
+}
+
 class DifficultyModeSummary {
   const DifficultyModeSummary({
     required this.activeMode,
@@ -29,6 +66,7 @@ class DifficultyModeSummary {
     required this.curveMultiplier,
     required this.failurePenaltyEnabled,
     required this.maxLevel,
+    required this.hardcoreEligibility,
   });
 
   final String activeMode;
@@ -37,13 +75,21 @@ class DifficultyModeSummary {
   final double curveMultiplier;
   final bool failurePenaltyEnabled;
   final int maxLevel;
+  final HardcoreEligibility hardcoreEligibility;
+
+  bool get canActivateHardcore {
+    return activeMode == 'hardcore' || hardcoreEligibility.isUnlocked;
+  }
 
   String get penaltyLabel {
-    if (!failurePenaltyEnabled || penaltyPercent <= 0) return 'Sem perda de XP por falha.';
+    if (!failurePenaltyEnabled || penaltyPercent <= 0) {
+      return 'Sem perda de XP por falha.';
+    }
     return 'Falhas removem $penaltyPercent% do XP da missão.';
   }
 
-  String get curveLabel => 'Curva de nível ${curveMultiplier.toStringAsFixed(2).replaceAll('.', ',')}x';
+  String get curveLabel =>
+      'Curva de nível ${curveMultiplier.toStringAsFixed(2).replaceAll('.', ',')}x';
 }
 
 class DifficultyPenaltySettlementResult {
@@ -64,9 +110,34 @@ class DifficultyPenaltySettlementResult {
 }
 
 class DifficultyService {
+  DifficultyService({Future<Database> Function()? databaseProvider})
+    : _databaseProvider = databaseProvider ?? _defaultDatabaseProvider;
+
+  static const int hardcoreRequiredCheckIns = 7;
+
+  final Future<Database> Function() _databaseProvider;
+
+  static Future<Database> _defaultDatabaseProvider() {
+    return AppDatabase.instance.database;
+  }
+
+  static String normalizeMode(String mode) {
+    return switch (mode) {
+      'hard' => 'hard',
+      'hardcore' => 'hardcore',
+      _ => 'normal',
+    };
+  }
+
   Future<List<DifficultyProfile>> getProfiles() async {
-    final db = await AppDatabase.instance.database;
-    final rows = await db.query(
+    final db = await _databaseProvider();
+    return _getProfiles(db);
+  }
+
+  Future<List<DifficultyProfile>> _getProfiles(
+    DatabaseExecutor executor,
+  ) async {
+    final rows = await executor.query(
       'difficulty_profiles',
       where: 'is_active = ?',
       whereArgs: [1],
@@ -76,8 +147,12 @@ class DifficultyService {
   }
 
   Future<String> getActiveMode() async {
-    final db = await AppDatabase.instance.database;
-    final rows = await db.query(
+    final db = await _databaseProvider();
+    return _getActiveMode(db);
+  }
+
+  Future<String> _getActiveMode(DatabaseExecutor executor) async {
+    final rows = await executor.query(
       'settings',
       columns: ['value'],
       where: 'key = ?',
@@ -89,12 +164,51 @@ class DifficultyService {
     return value.isEmpty ? 'normal' : value;
   }
 
+  Future<HardcoreEligibility> getHardcoreEligibility() async {
+    final db = await _databaseProvider();
+    return _getHardcoreEligibility(db);
+  }
+
+  Future<HardcoreEligibility> _getHardcoreEligibility(
+    DatabaseExecutor executor,
+  ) async {
+    final rows = await executor.rawQuery('''
+      SELECT COUNT(DISTINCT checkin_date) AS total
+      FROM daily_checkins
+      WHERE length(checkin_date) = 10
+        AND checkin_date GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]'
+        AND date(checkin_date, '+0 days') = checkin_date;
+    ''');
+    final rawTotal = rows.isEmpty ? null : rows.first['total'];
+    final validCheckIns = rawTotal is num
+        ? rawTotal.toInt()
+        : int.tryParse(rawTotal?.toString() ?? '') ?? 0;
+    return HardcoreEligibility(
+      validCheckIns: validCheckIns,
+      requiredCheckIns: hardcoreRequiredCheckIns,
+    );
+  }
+
+  Future<HardcoreEligibility> validateModeChange(String mode) async {
+    final normalized = normalizeMode(mode);
+    final db = await _databaseProvider();
+    final activeMode = await _getActiveMode(db);
+    final eligibility = await _getHardcoreEligibility(db);
+    _ensureModeChangeAllowed(
+      activeMode: activeMode,
+      requestedMode: normalized,
+      eligibility: eligibility,
+    );
+    return eligibility;
+  }
+
   Future<DifficultyModeSummary> getSummary() async {
-    final db = await AppDatabase.instance.database;
+    final db = await _databaseProvider();
     final settings = await _loadSettings(db);
     final mode = _readString(settings, 'active_difficulty_mode', 'normal');
-    final profiles = await getProfiles();
+    final profiles = await _getProfiles(db);
     final profile = _profileFor(profiles, mode);
+    final hardcoreEligibility = await _getHardcoreEligibility(db);
     final curveMultiplier = _readDouble(
       settings,
       'level_curve_multiplier_$mode',
@@ -106,70 +220,84 @@ class DifficultyService {
       activeName: profile?.name ?? _modeLabel(mode),
       penaltyPercent: profile?.penaltyPercent ?? 0,
       curveMultiplier: curveMultiplier,
-      failurePenaltyEnabled: _readBool(settings, 'mission_failure_penalty_enabled', true),
-      maxLevel: _readInt(settings, 'hero_max_level', ProgressionService.defaultMaxLevel),
+      failurePenaltyEnabled: _readBool(
+        settings,
+        'mission_failure_penalty_enabled',
+        true,
+      ),
+      maxLevel: _readInt(
+        settings,
+        'hero_max_level',
+        ProgressionService.defaultMaxLevel,
+      ),
+      hardcoreEligibility: hardcoreEligibility,
     );
   }
 
   Future<void> setActiveMode(String mode) async {
-    final normalized = switch (mode) {
-      'hard' => 'hard',
-      'hardcore' => 'hardcore',
-      _ => 'normal',
-    };
-
-    final db = await AppDatabase.instance.database;
+    final normalized = normalizeMode(mode);
+    final db = await _databaseProvider();
     final now = DateTime.now().toIso8601String();
 
-    await db.transaction((txn) async {
-      await txn.insert(
-        'settings',
-        {
-          'key': 'active_difficulty_mode',
-          'value': normalized,
-          'value_type': 'string',
-          'description': 'Modo de dificuldade ativo da campanha atual.',
-          'updated_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.ignore,
-      );
+    await db.transaction((txn) => _setActiveMode(txn, normalized, nowIso: now));
+  }
 
-      await txn.update(
-        'settings',
-        {
-          'value': normalized,
-          'updated_at': now,
-        },
-        where: 'key = ?',
-        whereArgs: ['active_difficulty_mode'],
-      );
+  Future<void> setActiveModeInTransaction(
+    Transaction transaction,
+    String mode, {
+    String? nowIso,
+  }) {
+    return _setActiveMode(
+      transaction,
+      normalizeMode(mode),
+      nowIso: nowIso ?? DateTime.now().toIso8601String(),
+    );
+  }
 
-      await txn.update(
-        'campaigns',
-        {
-          'difficulty_mode': normalized,
-          'updated_at': now,
-        },
-        where: 'is_active = ?',
-        whereArgs: [1],
+  Future<void> _setActiveMode(
+    DatabaseExecutor executor,
+    String normalized, {
+    required String nowIso,
+  }) async {
+    final activeMode = await _getActiveMode(executor);
+    if (activeMode != normalized) {
+      final eligibility = await _getHardcoreEligibility(executor);
+      _ensureModeChangeAllowed(
+        activeMode: activeMode,
+        requestedMode: normalized,
+        eligibility: eligibility,
       );
+    }
 
-      await ProgressionService.refreshHeroLevel(txn, nowIso: now);
+    await executor.insert('settings', {
+      'key': 'active_difficulty_mode',
+      'value': normalized,
+      'value_type': 'string',
+      'description': 'Modo de dificuldade ativo da campanha atual.',
+      'updated_at': nowIso,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
 
-      await txn.insert(
-        'history_events',
-        {
-          'id': IdGenerator.create('history'),
-          'title': 'Dificuldade alterada: ${_modeLabel(normalized)}',
-          'description': 'A campanha agora usa o modo ${_modeLabel(normalized)}.',
-          'type': 'difficulty_changed',
-          'xp_delta': 0,
-          'coins_delta': 0,
-          'occurred_at': now,
-        },
-        conflictAlgorithm: ConflictAlgorithm.abort,
-      );
-    });
+    await executor.update(
+      'settings',
+      {'value': normalized, 'updated_at': nowIso},
+      where: 'key = ?',
+      whereArgs: ['active_difficulty_mode'],
+    );
+
+    await _syncActiveCampaignMode(executor, normalized, nowIso);
+    if (activeMode == normalized) return;
+
+    await ProgressionService.refreshHeroLevel(executor, nowIso: nowIso);
+
+    await executor.insert('history_events', {
+      'id': IdGenerator.create('history'),
+      'title': 'Dificuldade alterada: ${_modeLabel(normalized)}',
+      'description': 'A campanha agora usa o modo ${_modeLabel(normalized)}.',
+      'type': 'difficulty_changed',
+      'xp_delta': 0,
+      'coins_delta': 0,
+      'occurred_at': nowIso,
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
   Future<DifficultyPenaltyPreview> previewPenalty({
@@ -189,10 +317,15 @@ class DifficultyService {
     );
   }
 
-  Future<DifficultyPenaltySettlementResult> applyPendingMissionPenalties() async {
-    final db = await AppDatabase.instance.database;
+  Future<DifficultyPenaltySettlementResult>
+  applyPendingMissionPenalties() async {
+    final db = await _databaseProvider();
     final settings = await _loadSettings(db);
-    final enabled = _readBool(settings, 'mission_failure_penalty_enabled', true);
+    final enabled = _readBool(
+      settings,
+      'mission_failure_penalty_enabled',
+      true,
+    );
     final mode = _readString(settings, 'active_difficulty_mode', 'normal');
     final profiles = await getProfiles();
     final profile = _profileFor(profiles, mode);
@@ -253,37 +386,34 @@ class DifficultyService {
         final xpPenalty = ((xpReward * penaltyPercent) / 100).round();
         if (xpPenalty <= 0) continue;
 
-        await _applyHeroXpPenalty(txn: txn, xpPenalty: xpPenalty, nowIso: nowIso);
-
-        await txn.insert(
-          'difficulty_penalties',
-          {
-            'id': IdGenerator.create('penalty'),
-            'item_type': 'mission',
-            'item_id': missionId,
-            'period_start': range.startIso,
-            'period_end': range.endIso,
-            'difficulty_mode': mode,
-            'penalty_percent': penaltyPercent,
-            'xp_penalty': xpPenalty,
-            'applied_at': nowIso,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
+        await _applyHeroXpPenalty(
+          txn: txn,
+          xpPenalty: xpPenalty,
+          nowIso: nowIso,
         );
 
-        await txn.insert(
-          'history_events',
-          {
-            'id': IdGenerator.create('history'),
-            'title': 'Penalidade aplicada: ${readString(mission, 'title')}',
-            'description': 'Missão ${_typeLabel(type).toLowerCase()} não concluída no período anterior. -$xpPenalty XP no modo ${_modeLabel(mode)}.',
-            'type': 'difficulty_penalty',
-            'xp_delta': -xpPenalty,
-            'coins_delta': 0,
-            'occurred_at': nowIso,
-          },
-          conflictAlgorithm: ConflictAlgorithm.abort,
-        );
+        await txn.insert('difficulty_penalties', {
+          'id': IdGenerator.create('penalty'),
+          'item_type': 'mission',
+          'item_id': missionId,
+          'period_start': range.startIso,
+          'period_end': range.endIso,
+          'difficulty_mode': mode,
+          'penalty_percent': penaltyPercent,
+          'xp_penalty': xpPenalty,
+          'applied_at': nowIso,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
+
+        await txn.insert('history_events', {
+          'id': IdGenerator.create('history'),
+          'title': 'Penalidade aplicada: ${readString(mission, 'title')}',
+          'description':
+              'Missão ${_typeLabel(type).toLowerCase()} não concluída no período anterior. -$xpPenalty XP no modo ${_modeLabel(mode)}.',
+          'type': 'difficulty_penalty',
+          'xp_delta': -xpPenalty,
+          'coins_delta': 0,
+          'occurred_at': nowIso,
+        }, conflictAlgorithm: ConflictAlgorithm.abort);
 
         applied++;
         totalXpLost += xpPenalty;
@@ -294,6 +424,32 @@ class DifficultyService {
       checked: checked,
       applied: applied,
       totalXpLost: totalXpLost,
+    );
+  }
+
+  void _ensureModeChangeAllowed({
+    required String activeMode,
+    required String requestedMode,
+    required HardcoreEligibility eligibility,
+  }) {
+    final activatesHardcore =
+        requestedMode == 'hardcore' && activeMode != 'hardcore';
+    if (activatesHardcore && !eligibility.isUnlocked) {
+      throw HardcoreLockedException(eligibility);
+    }
+  }
+
+  Future<void> _syncActiveCampaignMode(
+    DatabaseExecutor executor,
+    String mode,
+    String nowIso,
+  ) {
+    return executor.update(
+      'campaigns',
+      {'difficulty_mode': mode, 'updated_at': nowIso},
+      where:
+          'is_active = ? AND (difficulty_mode IS NULL OR difficulty_mode != ?)',
+      whereArgs: [1, mode],
     );
   }
 
@@ -317,11 +473,7 @@ class DifficultyService {
 
     await txn.update(
       'hero_profiles',
-      {
-        'xp': newXp,
-        'level': newLevel,
-        'updated_at': nowIso,
-      },
+      {'xp': newXp, 'level': newLevel, 'updated_at': nowIso},
       where: 'id = ?',
       whereArgs: ['main_hero'],
     );
@@ -331,7 +483,11 @@ class DifficultyService {
     final current = PeriodUtils.rangeForMissionType(type, reference);
 
     if (type == 'monthly') {
-      final previousStart = DateTime(current.start.year, current.start.month - 1, 1);
+      final previousStart = DateTime(
+        current.start.year,
+        current.start.month - 1,
+        1,
+      );
       return PeriodRange(start: previousStart, end: current.start);
     }
 
@@ -340,7 +496,10 @@ class DifficultyService {
     return PeriodRange(start: previousStart, end: current.start);
   }
 
-  DifficultyProfile? _profileFor(List<DifficultyProfile> profiles, String mode) {
+  DifficultyProfile? _profileFor(
+    List<DifficultyProfile> profiles,
+    String mode,
+  ) {
     for (final profile in profiles) {
       if (profile.code == mode) return profile;
     }
@@ -370,7 +529,11 @@ class DifficultyService {
     };
   }
 
-  String _readString(Map<String, String> settings, String key, String fallback) {
+  String _readString(
+    Map<String, String> settings,
+    String key,
+    String fallback,
+  ) {
     final value = settings[key]?.trim();
     if (value == null || value.isEmpty) return fallback;
     return value;
@@ -382,7 +545,11 @@ class DifficultyService {
     return parsed;
   }
 
-  double _readDouble(Map<String, String> settings, String key, double fallback) {
+  double _readDouble(
+    Map<String, String> settings,
+    String key,
+    double fallback,
+  ) {
     final parsed = double.tryParse((settings[key] ?? '').replaceAll(',', '.'));
     if (parsed == null || parsed <= 0) return fallback;
     return parsed;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_version.dart';
 import '../design_system/game_design_system.dart';
 import '../features/achievements/achievements_screen.dart';
 import '../features/campaign/campaign_screen.dart';
@@ -333,50 +334,58 @@ class _AppShellState extends State<AppShell> {
               _currentPage.title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GameTextStyles.caption.copyWith(color: GameColors.textMuted),
+              style: GameTextStyles.caption.copyWith(
+                color: GameColors.textMuted,
+              ),
             ),
           ],
         ),
         actions: const [
-          _ShellTopBadge(label: 'V4.3'),
+          _ShellTopBadge(label: 'V${AppVersion.display}'),
           SizedBox(width: GameSpacing.sm),
         ],
       ),
       drawer: Drawer(
         child: DecoratedBox(
-          decoration: const BoxDecoration(gradient: GameColors.appBackgroundGradient),
+          decoration: const BoxDecoration(
+            gradient: GameColors.appBackgroundGradient,
+          ),
           child: SafeArea(
             child: Column(
               children: [
                 const _DrawerHeader(),
-              const SizedBox(height: GameSpacing.xs),
-              Expanded(
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: GameSpacing.sm),
-                  itemCount: _groups.length,
-                  itemBuilder: (context, index) {
-                    final item = _groups[index];
-                    return _DrawerGroupItem(
-                      icon: item.icon,
-                      title: item.title,
-                      subtitle: item.subtitle,
-                      selected: _selectedGroupIndex == index,
-                      onTap: () => _selectGroup(index),
-                    );
-                  },
+                const SizedBox(height: GameSpacing.xs),
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: GameSpacing.sm,
+                    ),
+                    itemCount: _groups.length,
+                    itemBuilder: (context, index) {
+                      final item = _groups[index];
+                      return _DrawerGroupItem(
+                        icon: item.icon,
+                        title: item.title,
+                        subtitle: item.subtitle,
+                        selected: _selectedGroupIndex == index,
+                        onTap: () => _selectGroup(index),
+                      );
+                    },
+                  ),
                 ),
-              ),
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
-                child: _DrawerFooter(),
-              ),
-            ],
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 8, 16, 16),
+                  child: _DrawerFooter(),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-      ),
       body: DecoratedBox(
-        decoration: const BoxDecoration(gradient: GameColors.appBackgroundGradient),
+        decoration: const BoxDecoration(
+          gradient: GameColors.appBackgroundGradient,
+        ),
         child: PageView(
           key: ValueKey<int>(_selectedGroupIndex),
           controller: _pageController,
@@ -436,7 +445,10 @@ class _ShellTopBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(right: GameSpacing.xs),
-      padding: const EdgeInsets.symmetric(horizontal: GameSpacing.sm, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: GameSpacing.sm,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -452,9 +464,18 @@ class _ShellTopBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.auto_awesome_rounded, color: GameColors.rewardSoft, size: 15),
+          const Icon(
+            Icons.auto_awesome_rounded,
+            color: GameColors.rewardSoft,
+            size: 15,
+          ),
           const SizedBox(width: 5),
-          Text(label, style: GameTextStyles.caption.copyWith(color: GameColors.textPrimary)),
+          Text(
+            label,
+            style: GameTextStyles.caption.copyWith(
+              color: GameColors.textPrimary,
+            ),
+          ),
         ],
       ),
     );
@@ -487,9 +508,15 @@ class _DrawerHeader extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: GameColors.reward.withValues(alpha: 0.18),
-                  border: Border.all(color: GameColors.rewardSoft.withValues(alpha: 0.38)),
+                  border: Border.all(
+                    color: GameColors.rewardSoft.withValues(alpha: 0.38),
+                  ),
                 ),
-                child: const Icon(Icons.shield_rounded, size: 28, color: GameColors.rewardSoft),
+                child: const Icon(
+                  Icons.shield_rounded,
+                  size: 28,
+                  color: GameColors.rewardSoft,
+                ),
               ),
               const SizedBox(width: GameSpacing.sm),
               Expanded(
@@ -499,8 +526,10 @@ class _DrawerHeader extends StatelessWidget {
                     const Text('Game Life', style: GameTextStyles.title),
                     const SizedBox(height: 3),
                     Text(
-                      'Edição Campanha V4.3',
-                      style: GameTextStyles.caption.copyWith(color: GameColors.textSecondary),
+                      'Edição Campanha V${AppVersion.display}',
+                      style: GameTextStyles.caption.copyWith(
+                        color: GameColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
@@ -555,10 +584,14 @@ class _DrawerGroupItem extends StatelessWidget {
               vertical: GameSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: selected ? GameColors.primary.withValues(alpha: 0.16) : Colors.transparent,
+              color: selected
+                  ? GameColors.primary.withValues(alpha: 0.16)
+                  : Colors.transparent,
               borderRadius: GameRadius.button,
               border: Border.all(
-                color: selected ? GameColors.primary.withValues(alpha: 0.32) : Colors.transparent,
+                color: selected
+                    ? GameColors.primary.withValues(alpha: 0.32)
+                    : Colors.transparent,
               ),
             ),
             child: Row(
@@ -574,7 +607,9 @@ class _DrawerGroupItem extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GameTextStyles.cardTitle.copyWith(
-                          color: selected ? GameColors.textPrimary : GameColors.textSecondary,
+                          color: selected
+                              ? GameColors.textPrimary
+                              : GameColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -618,11 +653,15 @@ class _DrawerFooter extends StatelessWidget {
       ),
       child: const Row(
         children: [
-          Icon(Icons.info_outline_rounded, size: 18, color: GameColors.textMuted),
+          Icon(
+            Icons.info_outline_rounded,
+            size: 18,
+            color: GameColors.textMuted,
+          ),
           SizedBox(width: GameSpacing.xs),
           Expanded(
             child: Text(
-              'Release Premium V4.3 • local-first',
+              'Release Premium V${AppVersion.display} • local-first',
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: GameTextStyles.caption,
@@ -701,7 +740,9 @@ class _LocalNavigationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = selected ? GameColors.textPrimary : GameColors.textMuted;
-    final background = selected ? GameColors.primary.withValues(alpha: 0.22) : Colors.transparent;
+    final background = selected
+        ? GameColors.primary.withValues(alpha: 0.22)
+        : Colors.transparent;
 
     return Material(
       color: Colors.transparent,
@@ -721,7 +762,9 @@ class _LocalNavigationItem extends StatelessWidget {
             color: background,
             borderRadius: GameRadius.button,
             border: Border.all(
-              color: selected ? GameColors.primary.withValues(alpha: 0.30) : Colors.transparent,
+              color: selected
+                  ? GameColors.primary.withValues(alpha: 0.30)
+                  : Colors.transparent,
             ),
           ),
           child: Column(

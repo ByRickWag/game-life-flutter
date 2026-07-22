@@ -3,6 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import '../database/app_database.dart';
 import '../models/game_models.dart';
 import '../models/v3_commitment_models.dart';
+import '../services/difficulty_service.dart';
 import '../utils/id_generator.dart';
 import 'achievement_repository.dart';
 
@@ -35,14 +36,18 @@ class CampaignCommitmentSummary {
 
   double get progressPercent {
     if (milestones.isEmpty) return signals.overallProgress;
-    final total = milestones.fold<double>(0, (sum, item) => sum + item.progress);
+    final total = milestones.fold<double>(
+      0,
+      (sum, item) => sum + item.progress,
+    );
     final value = total / milestones.length;
     if (value < 0) return 0;
     if (value > 1) return 1;
     return value;
   }
 
-  int get completedMilestones => milestones.where((item) => item.isCompleted).length;
+  int get completedMilestones =>
+      milestones.where((item) => item.isCompleted).length;
 
   int get totalMilestones => milestones.length;
 
@@ -133,7 +138,14 @@ class CampaignProgressSignals {
     };
   }
 
-  int get totalAreaXp => bodyHealthAreaXp + mindKnowledgeAreaXp + spiritPurposeAreaXp + projectsCareerAreaXp + creationExpressionAreaXp + financeResponsibilityAreaXp + routineOrderAreaXp;
+  int get totalAreaXp =>
+      bodyHealthAreaXp +
+      mindKnowledgeAreaXp +
+      spiritPurposeAreaXp +
+      projectsCareerAreaXp +
+      creationExpressionAreaXp +
+      financeResponsibilityAreaXp +
+      routineOrderAreaXp;
 
   double get overallProgress {
     return _average([
@@ -243,8 +255,20 @@ class UpdateCampaignMilestoneInput {
 }
 
 class CampaignCommitmentRepository {
+  static double preserveAutomaticProgress({
+    required double current,
+    required double computed,
+  }) {
+    final safeCurrent = current.clamp(0.0, 1.0).toDouble();
+    final safeComputed = computed.clamp(0.0, 1.0).toDouble();
+    return safeComputed > safeCurrent ? safeComputed : safeCurrent;
+  }
+
   Future<CampaignCommitmentSummary> getActiveCampaignSummary() async {
     final db = await AppDatabase.instance.database;
+    final activeDifficultyMode = DifficultyService.normalizeMode(
+      await DifficultyService(databaseProvider: () async => db).getActiveMode(),
+    );
     var rows = await db.query(
       'campaigns',
       where: 'is_active = ?',
@@ -253,7 +277,7 @@ class CampaignCommitmentRepository {
     );
 
     if (rows.isEmpty) {
-      await _ensureDefaultCampaign(db);
+      await _ensureDefaultCampaign(db, difficultyMode: activeDifficultyMode);
       rows = await db.query(
         'campaigns',
         where: 'is_active = ?',
@@ -279,10 +303,22 @@ class CampaignCommitmentRepository {
       mainGoal: _readString(campaignRow, 'main_goal'),
       startDate: _readString(campaignRow, 'start_date'),
       endDate: _readString(campaignRow, 'end_date'),
-      difficultyMode: _readString(campaignRow, 'difficulty_mode', fallback: 'normal'),
-      victoryMinimumPercent: _readInt(campaignRow, 'victory_minimum_percent', fallback: 60),
-      victoryGoodPercent: _readInt(campaignRow, 'victory_good_percent', fallback: 75),
-      victoryExcellentPercent: _readInt(campaignRow, 'victory_excellent_percent', fallback: 90),
+      difficultyMode: activeDifficultyMode,
+      victoryMinimumPercent: _readInt(
+        campaignRow,
+        'victory_minimum_percent',
+        fallback: 60,
+      ),
+      victoryGoodPercent: _readInt(
+        campaignRow,
+        'victory_good_percent',
+        fallback: 75,
+      ),
+      victoryExcellentPercent: _readInt(
+        campaignRow,
+        'victory_excellent_percent',
+        fallback: 90,
+      ),
       milestones: milestones,
       signals: signals,
     );
@@ -308,57 +344,70 @@ class CampaignCommitmentRepository {
 
   Future<void> updateCampaign(UpdateCampaignCommitmentInput input) async {
     final db = await AppDatabase.instance.database;
-    await db.update(
-      'campaigns',
-      {
-        'title': input.title.trim(),
-        'description': input.description.trim(),
-        'lore': input.lore.trim(),
-        'main_goal': input.mainGoal.trim(),
-        'start_date': input.startDate.trim().isEmpty ? DateTime.now().toIso8601String().substring(0, 10) : input.startDate.trim(),
-        'end_date': _nullable(input.endDate),
-        'difficulty_mode': input.difficultyMode,
-        'victory_minimum_percent': input.victoryMinimumPercent,
-        'victory_good_percent': input.victoryGoodPercent,
-        'victory_excellent_percent': input.victoryExcellentPercent,
-        'updated_at': DateTime.now().toIso8601String(),
-      },
-      where: 'id = ?',
-      whereArgs: [input.campaignId],
+    final difficultyService = DifficultyService(
+      databaseProvider: () async => db,
     );
+
+    // Reject an invalid Hardcore transition before changing campaign metadata.
+    await difficultyService.validateModeChange(input.difficultyMode);
+
+    final now = DateTime.now().toIso8601String();
+    await db.transaction((txn) async {
+      await txn.update(
+        'campaigns',
+        {
+          'title': input.title.trim(),
+          'description': input.description.trim(),
+          'lore': input.lore.trim(),
+          'main_goal': input.mainGoal.trim(),
+          'start_date': input.startDate.trim().isEmpty
+              ? now.substring(0, 10)
+              : input.startDate.trim(),
+          'end_date': _nullable(input.endDate),
+          'victory_minimum_percent': input.victoryMinimumPercent,
+          'victory_good_percent': input.victoryGoodPercent,
+          'victory_excellent_percent': input.victoryExcellentPercent,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [input.campaignId],
+      );
+
+      await difficultyService.setActiveModeInTransaction(
+        txn,
+        input.difficultyMode,
+        nowIso: now,
+      );
+    });
   }
 
   Future<void> createMilestone(CreateCampaignMilestoneInput input) async {
     final db = await AppDatabase.instance.database;
     final now = DateTime.now().toIso8601String();
-    await db.insert(
-      'campaign_milestones',
-      {
-        'id': IdGenerator.create('milestone'),
-        'campaign_id': input.campaignId,
-        'title': input.title.trim(),
-        'description': input.description.trim(),
-        'lore': input.lore.trim(),
-        'target_date': _nullable(input.targetDate),
-        'start_date': _nullable(input.startDate),
-        'end_date': _nullable(input.endDate),
-        'primary_area_id': _nullable(input.primaryAreaId),
-        'secondary_area_ids': input.secondaryAreaIds.trim(),
-        'chapter_kind': 'chapter',
-        'sort_order': input.sortOrder,
-        'status': 'active',
-        'progress': 0.0,
-        'xp_reward': input.xpReward,
-        'coins_reward': input.coinsReward,
-        'automation_key': null,
-        'auto_progress_enabled': 0,
-        'progress_note': null,
-        'completed_at': null,
-        'created_at': now,
-        'updated_at': now,
-      },
-      conflictAlgorithm: ConflictAlgorithm.abort,
-    );
+    await db.insert('campaign_milestones', {
+      'id': IdGenerator.create('milestone'),
+      'campaign_id': input.campaignId,
+      'title': input.title.trim(),
+      'description': input.description.trim(),
+      'lore': input.lore.trim(),
+      'target_date': _nullable(input.targetDate),
+      'start_date': _nullable(input.startDate),
+      'end_date': _nullable(input.endDate),
+      'primary_area_id': _nullable(input.primaryAreaId),
+      'secondary_area_ids': input.secondaryAreaIds.trim(),
+      'chapter_kind': 'chapter',
+      'sort_order': input.sortOrder,
+      'status': 'active',
+      'progress': 0.0,
+      'xp_reward': input.xpReward,
+      'coins_reward': input.coinsReward,
+      'automation_key': null,
+      'auto_progress_enabled': 0,
+      'progress_note': null,
+      'completed_at': null,
+      'created_at': now,
+      'updated_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.abort);
   }
 
   Future<void> updateMilestone(UpdateCampaignMilestoneInput input) async {
@@ -444,14 +493,30 @@ class CampaignCommitmentRepository {
     final now = DateTime.now().toIso8601String();
 
     for (final milestone in milestones) {
-      if (!milestone.autoProgressEnabled || milestone.automationKey.trim().isEmpty) continue;
+      if (!milestone.autoProgressEnabled ||
+          milestone.automationKey.trim().isEmpty) {
+        continue;
+      }
       final computed = _computeMilestoneProgress(milestone, signals);
-      final nextProgress = computed.progress.clamp(0.0, 1.0).toDouble();
       final currentProgress = milestone.progress.clamp(0.0, 1.0).toDouble();
-      final nextStatus = nextProgress >= 1 ? 'completed' : 'active';
-      final nextCompletedAt = nextProgress >= 1 ? (milestone.completedAt.isEmpty ? now : milestone.completedAt) : null;
+      final nextProgress = preserveAutomaticProgress(
+        current: currentProgress,
+        computed: computed.progress,
+      );
+      final nextStatus = milestone.isCompleted || nextProgress >= 1
+          ? 'completed'
+          : 'active';
+      final nextCompletedAt = nextStatus == 'completed'
+          ? (milestone.completedAt.isEmpty ? now : milestone.completedAt)
+          : null;
+      final currentCompletedAt = milestone.completedAt.isEmpty
+          ? null
+          : milestone.completedAt;
 
-      if ((nextProgress - currentProgress).abs() < 0.001 && milestone.status == nextStatus && milestone.progressNote == computed.note) {
+      if ((nextProgress - currentProgress).abs() < 0.001 &&
+          milestone.status == nextStatus &&
+          milestone.progressNote == computed.note &&
+          currentCompletedAt == nextCompletedAt) {
         continue;
       }
 
@@ -541,25 +606,38 @@ class CampaignCommitmentRepository {
       spiritPurposeAreaXp: readInt(row, 'spirit_purpose_area_xp'),
       projectsCareerAreaXp: readInt(row, 'projects_career_area_xp'),
       creationExpressionAreaXp: readInt(row, 'creation_expression_area_xp'),
-      financeResponsibilityAreaXp: readInt(row, 'finance_responsibility_area_xp'),
+      financeResponsibilityAreaXp: readInt(
+        row,
+        'finance_responsibility_area_xp',
+      ),
       routineOrderAreaXp: readInt(row, 'routine_order_area_xp'),
     );
   }
 
-  _ComputedCampaignProgress _computeMilestoneProgress(CampaignMilestone milestone, CampaignProgressSignals signals) {
-    final keyProgress = _computeAutomationKeyProgress(milestone.automationKey, signals);
+  _ComputedCampaignProgress _computeMilestoneProgress(
+    CampaignMilestone milestone,
+    CampaignProgressSignals signals,
+  ) {
+    final keyProgress = _computeAutomationKeyProgress(
+      milestone.automationKey,
+      signals,
+    );
     final areaProgress = _computeAreaProgress(milestone, signals);
 
     if (areaProgress == null) return keyProgress;
 
-    final combined = (areaProgress.progress * 0.55) + (keyProgress.progress * 0.45);
+    final combined =
+        (areaProgress.progress * 0.55) + (keyProgress.progress * 0.45);
     return _ComputedCampaignProgress(
       progress: combined.clamp(0.0, 1.0).toDouble(),
       note: '${areaProgress.note} • ${keyProgress.note}',
     );
   }
 
-  _ComputedCampaignProgress? _computeAreaProgress(CampaignMilestone milestone, CampaignProgressSignals signals) {
+  _ComputedCampaignProgress? _computeAreaProgress(
+    CampaignMilestone milestone,
+    CampaignProgressSignals signals,
+  ) {
     final primaryAreaId = milestone.primaryAreaId.trim();
     if (primaryAreaId.isEmpty) return null;
 
@@ -568,14 +646,20 @@ class CampaignCommitmentRepository {
     final secondaryIds = milestone.secondaryAreaIdList;
     final secondaryProgress = secondaryIds.isEmpty
         ? 0.0
-        : _average(secondaryIds.map((id) => _ratio(signals.areaXp(id), (target * 0.6).round())).toList());
+        : _average(
+            secondaryIds
+                .map((id) => _ratio(signals.areaXp(id), (target * 0.6).round()))
+                .toList(),
+          );
 
     final progress = secondaryIds.isEmpty
         ? _ratio(primaryXp, target)
         : (_ratio(primaryXp, target) * 0.72) + (secondaryProgress * 0.28);
 
     final primaryLabel = _areaLabel(primaryAreaId);
-    final secondaryLabel = secondaryIds.isEmpty ? 'sem áreas secundárias' : secondaryIds.map(_areaLabel).join(', ');
+    final secondaryLabel = secondaryIds.isEmpty
+        ? 'sem áreas secundárias'
+        : secondaryIds.map(_areaLabel).join(', ');
     return _ComputedCampaignProgress(
       progress: progress.clamp(0.0, 1.0).toDouble(),
       note: '$primaryLabel: $primaryXp/$target XP • Apoio: $secondaryLabel',
@@ -587,7 +671,10 @@ class CampaignCommitmentRepository {
     return 140 + (order * 80);
   }
 
-  _ComputedCampaignProgress _computeAutomationKeyProgress(String automationKey, CampaignProgressSignals signals) {
+  _ComputedCampaignProgress _computeAutomationKeyProgress(
+    String automationKey,
+    CampaignProgressSignals signals,
+  ) {
     switch (automationKey) {
       case 'foundation':
         return _ComputedCampaignProgress(
@@ -598,7 +685,8 @@ class CampaignCommitmentRepository {
             _ratio(signals.waterDays, 7),
             _ratio(signals.disciplineXp, 100),
           ]),
-          note: '${signals.bestStreak}/7 dias de sequência • ${signals.missionsCompleted}/15 missões • ${signals.habitRewards}/10 recompensas de hábito',
+          note:
+              '${signals.bestStreak}/7 dias de sequência • ${signals.missionsCompleted}/15 missões • ${signals.habitRewards}/10 recompensas de hábito',
         );
       case 'body_health':
         return _ComputedCampaignProgress(
@@ -608,7 +696,8 @@ class CampaignCommitmentRepository {
             _ratio(signals.sessionsRegistered, 8),
             _ratio(signals.strengthXp + signals.vigorXp, 220),
           ]),
-          note: '${signals.waterDays}/14 dias com água • ${signals.foodLimitRewards}/4 períodos alimentares • ${signals.sessionsRegistered}/8 sessões',
+          note:
+              '${signals.waterDays}/14 dias com água • ${signals.foodLimitRewards}/4 períodos alimentares • ${signals.sessionsRegistered}/8 sessões',
         );
       case 'mind_programming':
         return _ComputedCampaignProgress(
@@ -618,7 +707,8 @@ class CampaignCommitmentRepository {
             _ratio(signals.projectTasksCompleted, 12),
             _ratio(signals.clarityXp + signals.focusXp, 220),
           ]),
-          note: '${signals.focusHours}/15h de foco • ${signals.objectivesCompleted}/2 objetivos • ${signals.projectTasksCompleted}/12 tarefas de projeto',
+          note:
+              '${signals.focusHours}/15h de foco • ${signals.objectivesCompleted}/2 objetivos • ${signals.projectTasksCompleted}/12 tarefas de projeto',
         );
       case 'faith_purpose':
         return _ComputedCampaignProgress(
@@ -628,7 +718,8 @@ class CampaignCommitmentRepository {
             _ratio(signals.faithXp, 160),
             _ratio(signals.habitRewards, 18),
           ]),
-          note: '${signals.checkIns}/20 check-ins • sequência ${signals.bestStreak}/14 • ${signals.faithXp}/160 XP em Fé',
+          note:
+              '${signals.checkIns}/20 check-ins • sequência ${signals.bestStreak}/14 • ${signals.faithXp}/160 XP em Fé',
         );
       case 'projects_finance':
         return _ComputedCampaignProgress(
@@ -639,7 +730,8 @@ class CampaignCommitmentRepository {
             _ratio(signals.vaultDeposits, 3),
             _ratio(signals.responsibilityXp, 160),
           ]),
-          note: '${signals.projectTasksCompleted}/20 tarefas • ${signals.projectsCompleted}/1 projeto • R\$ ${signals.vaultSaved}/100 guardados',
+          note:
+              '${signals.projectTasksCompleted}/20 tarefas • ${signals.projectsCompleted}/1 projeto • R\$ ${signals.vaultSaved}/100 guardados',
         );
       case 'campaign_consolidation':
         return _ComputedCampaignProgress(
@@ -650,10 +742,14 @@ class CampaignCommitmentRepository {
             _ratio(signals.habitRewards, 30),
             _ratio(signals.focusMinutes, 1800),
           ]),
-          note: '${signals.achievementsUnlocked}/12 conquistas • ${signals.totalAttributeXp}/700 XP de atributos • ${signals.focusHours}/30h de foco',
+          note:
+              '${signals.achievementsUnlocked}/12 conquistas • ${signals.totalAttributeXp}/700 XP de atributos • ${signals.focusHours}/30h de foco',
         );
       default:
-        return const _ComputedCampaignProgress(progress: 0, note: 'Capítulo sem automação vinculada.');
+        return const _ComputedCampaignProgress(
+          progress: 0,
+          note: 'Capítulo sem automação vinculada.',
+        );
     }
   }
 
@@ -670,28 +766,30 @@ class CampaignCommitmentRepository {
     };
   }
 
-  Future<void> _ensureDefaultCampaign(Database db) async {
+  Future<void> _ensureDefaultCampaign(
+    Database db, {
+    required String difficultyMode,
+  }) async {
     final now = DateTime.now().toIso8601String();
-    await db.insert(
-      'campaigns',
-      {
-        'id': 'transformation_20_25',
-        'title': 'Transformação dos 20 aos 25',
-        'description': 'Campanha principal de evolução pessoal com foco em corpo, mente, fé, finanças, programação e projetos.',
-        'lore': 'Uma jornada de cinco anos para sair do automático e construir uma vida mais forte, lúcida e responsável.',
-        'main_goal': 'Chegar aos 25 anos com saúde melhor, disciplina real, carreira/projetos encaminhados, fé fortalecida e vida financeira mais madura.',
-        'start_date': '2026-07-13',
-        'end_date': '2031-07-13',
-        'difficulty_mode': 'normal',
-        'victory_minimum_percent': 60,
-        'victory_good_percent': 75,
-        'victory_excellent_percent': 90,
-        'is_active': 1,
-        'created_at': now,
-        'updated_at': now,
-      },
-      conflictAlgorithm: ConflictAlgorithm.ignore,
-    );
+    await db.insert('campaigns', {
+      'id': 'transformation_20_25',
+      'title': 'Transformação dos 20 aos 25',
+      'description':
+          'Campanha principal de evolução pessoal com foco em corpo, mente, fé, finanças, programação e projetos.',
+      'lore':
+          'Uma jornada de cinco anos para sair do automático e construir uma vida mais forte, lúcida e responsável.',
+      'main_goal':
+          'Chegar aos 25 anos com saúde melhor, disciplina real, carreira/projetos encaminhados, fé fortalecida e vida financeira mais madura.',
+      'start_date': '2026-07-13',
+      'end_date': '2031-07-13',
+      'difficulty_mode': difficultyMode,
+      'victory_minimum_percent': 60,
+      'victory_good_percent': 75,
+      'victory_excellent_percent': 90,
+      'is_active': 1,
+      'created_at': now,
+      'updated_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }
 
   String? _nullable(String? value) {
@@ -699,7 +797,11 @@ class CampaignCommitmentRepository {
     return text.isEmpty ? null : text;
   }
 
-  String _readString(Map<String, Object?>? map, String key, {String fallback = ''}) {
+  String _readString(
+    Map<String, Object?>? map,
+    String key, {
+    String fallback = '',
+  }) {
     if (map == null) return fallback;
     final value = map[key];
     final text = value?.toString();
@@ -733,6 +835,9 @@ double _ratio(num value, num target) {
 
 double _average(List<double> values) {
   if (values.isEmpty) return 0;
-  final total = values.fold<double>(0, (sum, value) => sum + value.clamp(0.0, 1.0).toDouble());
+  final total = values.fold<double>(
+    0,
+    (sum, value) => sum + value.clamp(0.0, 1.0).toDouble(),
+  );
   return (total / values.length).clamp(0.0, 1.0).toDouble();
 }

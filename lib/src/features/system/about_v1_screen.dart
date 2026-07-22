@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/app_version.dart';
 import '../../design_system/game_design_system.dart';
 
 class AboutV1Screen extends StatelessWidget {
@@ -20,7 +21,11 @@ class AboutV1Screen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.shield_rounded, color: GameColors.rewardSoft, size: 36),
+                  Icon(
+                    Icons.shield_rounded,
+                    color: GameColors.rewardSoft,
+                    size: 36,
+                  ),
                   SizedBox(height: GameSpacing.sm),
                   Text('Game Life', style: GameTextStyles.title),
                   SizedBox(height: GameSpacing.xs),
@@ -111,7 +116,12 @@ class _VersionCard extends StatelessWidget {
             children: [
               const Icon(Icons.info_outline_rounded, color: GameColors.info),
               const SizedBox(width: GameSpacing.sm),
-              Expanded(child: Text('Informações da versão', style: GameTextStyles.cardTitle)),
+              Expanded(
+                child: Text(
+                  'Informações da versão',
+                  style: GameTextStyles.cardTitle,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: GameSpacing.sm),
@@ -119,11 +129,36 @@ class _VersionCard extends StatelessWidget {
             spacing: GameSpacing.xs,
             runSpacing: GameSpacing.xs,
             children: [
-              GameChip(label: '4.5.0', icon: Icons.new_releases_rounded, color: GameColors.primary, selected: true),
-              GameChip(label: 'Capítulos V1', icon: Icons.auto_stories_rounded, color: GameColors.faith, selected: true),
-              GameChip(label: 'Local-first', icon: Icons.storage_rounded, color: GameColors.info, selected: true),
-              GameChip(label: 'Offline', icon: Icons.cloud_off_rounded, color: GameColors.success, selected: true),
-              GameChip(label: 'Android', icon: Icons.android_rounded, color: GameColors.reward, selected: true),
+              GameChip(
+                label: AppVersion.display,
+                icon: Icons.new_releases_rounded,
+                color: GameColors.primary,
+                selected: true,
+              ),
+              GameChip(
+                label: 'Capítulos V1',
+                icon: Icons.auto_stories_rounded,
+                color: GameColors.faith,
+                selected: true,
+              ),
+              GameChip(
+                label: 'Local-first',
+                icon: Icons.storage_rounded,
+                color: GameColors.info,
+                selected: true,
+              ),
+              GameChip(
+                label: 'Offline',
+                icon: Icons.cloud_off_rounded,
+                color: GameColors.success,
+                selected: true,
+              ),
+              GameChip(
+                label: 'Android',
+                icon: Icons.android_rounded,
+                color: GameColors.reward,
+                selected: true,
+              ),
             ],
           ),
         ],
@@ -176,7 +211,10 @@ class _AboutSection extends StatelessWidget {
                   child: Container(
                     width: 5,
                     height: 5,
-                    decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                 ),
                 const SizedBox(width: GameSpacing.sm),
